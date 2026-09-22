@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ColdChainTracker — Documentação</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root{
+    --bg:#f3f7fb; --surface:#ffffff; --border:#d6e2ee;
+    --text:#14233d; --text-dim:#56698a;
+    --accent:#1ca7e0; --accent-strong:#0b4f8f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#081420; --surface:#0f1e30; --border:#20374f;
+      --text:#e9f1fb; --text-dim:#94a9c9;
+      --accent:#5cc8f5; --accent-strong:#8fdcff;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Manrope',system-ui,sans-serif; line-height:1.6;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:48px 20px;
+  }
+
+  main{ max-width:760px; width:100%; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong);
+    text-transform:uppercase; letter-spacing:0.1em; margin-bottom:10px;
+  }
+  h1{ font-family:'Outfit',system-ui,sans-serif; font-size:34px; margin:0 0 12px; letter-spacing:-0.01em; }
+  main > p.lead{ color:var(--text-dim); font-size:15.5px; max-width:640px; margin:0 0 40px; }
+
+  .cards{ display:grid; gap:16px; grid-template-columns:1fr; }
+  @media (min-width:640px){ .cards{ grid-template-columns:1fr 1fr; } }
+
+  a.card{
+    display:block; background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:24px 26px; text-decoration:none; color:var(--text);
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  a.card:hover{ border-color:var(--accent); transform:translateY(-2px); }
+  a.card .badge{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#fff;
+    background:var(--accent-strong); border-radius:6px; padding:2px 8px; margin-bottom:12px;
+  }
+  a.card h2{ font-family:'Outfit',system-ui,sans-serif; font-size:18px; margin:0 0 6px; }
+  a.card p{ color:var(--text-dim); font-size:13.5px; margin:0; }
+
+  footer{ margin-top:40px; color:var(--text-dim); font-size:12.5px; }
+  footer a{ color:var(--accent-strong); }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">ColdChainTracker</div>
+  <h1>Documentação do projeto</h1>
+  <p class="lead">Portal central de documentação técnica, frontend e relatórios de teste da API do ColdChainTracker.</p>
+
+  <div class="cards">
+    <a class="card" href="documentacao-tecnica.html">
+      <span class="badge">Docs</span>
+      <h2>Documentação Técnica</h2>
+      <p>Arquitetura, requisitos e especificações técnicas do sistema.</p>
+    </a>
+    <a class="card" href="frontend-docs/">
+      <span class="badge">Frontend</span>
+      <h2>Documentação Frontend</h2>
+      <p>Componentes, telas e fluxo da aplicação frontend.</p>
+    </a>
+    <a class="card" href="api-test-reports/">
+      <span class="badge">API</span>
+      <h2>Relatórios de Teste</h2>
+      <p>Cobertura de testes e resultados de validação da API.</p>
+    </a>
+  </div>
+
+  <footer>Repositório: <a href="https://github.com/Vinicius-AMM/coldchaintracker-docs">coldchaintracker-docs</a></footer>
+</main>
+</body>
+</html>
