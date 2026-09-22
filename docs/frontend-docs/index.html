@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontend — ColdChainTracker</title>
+<meta name="description" content="Documentação do frontend Angular do ColdChainTracker: arquitetura, autenticação, design system e tour por todas as telas, com dados reais da API.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f3f7fb; --surface:#ffffff; --surface-2:#eaf2f9; --border:#d6e2ee;
+    --text:#14233d; --text-dim:#56698a;
+    --accent:#1ca7e0; --accent-strong:#0b4f8f; --accent-ink:#ffffff;
+    --success:#1a8f4c; --success-bg:#e5f6ec; --success-border:#b6e3c7;
+    --danger:#b93a2c; --danger-bg:#fbebe8; --danger-border:#f0c4bb;
+    --warning:#a9720b; --warning-bg:#fdf1dc; --warning-border:#f0dfb4;
+    --line:#c3d5e6;
+    --code-bg:#0e1c2e; --code-text:#d9e6f2; --code-key:#5fc1ee; --code-str:#f0b86e; --code-num:#7fb3f5;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --bg:#081420; --surface:#0f1e30; --surface-2:#132840; --border:#20374f;
+      --text:#e9f1fb; --text-dim:#94a9c9;
+      --accent:#5cc8f5; --accent-strong:#8fdcff; --accent-ink:#04223f;
+      --success:#3ecb7c; --success-bg:#0f2a1d; --success-border:#1f4a34;
+      --danger:#ff8478; --danger-bg:#321815; --danger-border:#5a2a24;
+      --warning:#e0b45c; --warning-bg:#332507; --warning-border:#5a4416;
+      --line:#25405c; --code-bg:#081320; --code-text:#d9e6f2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#081420; --surface:#0f1e30; --surface-2:#132840; --border:#20374f;
+    --text:#e9f1fb; --text-dim:#94a9c9;
+    --accent:#5cc8f5; --accent-strong:#8fdcff; --accent-ink:#04223f;
+    --success:#3ecb7c; --success-bg:#0f2a1d; --success-border:#1f4a34;
+    --danger:#ff8478; --danger-bg:#321815; --danger-border:#5a2a24;
+    --warning:#e0b45c; --warning-bg:#332507; --warning-border:#5a4416;
+    --line:#25405c; --code-bg:#081320; --code-text:#d9e6f2;
+  }
+
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'Manrope',system-ui,sans-serif; padding-inline:16px; padding-block:32px; }
+  .page{ max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:40px; }
+  h1,h2,h3{ font-family:'Outfit',system-ui,sans-serif; letter-spacing:-0.01em; text-wrap:balance; margin:0; }
+
+  header.hero{ display:flex; flex-direction:column; gap:14px; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--accent-strong); text-transform:uppercase; letter-spacing:0.09em; display:flex; align-items:center; gap:8px; }
+  .eyebrow .dot{ width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px var(--success-bg); }
+  h1{ font-size:clamp(26px,4.5vw,34px); font-weight:700; }
+  .sub{ color:var(--text-dim); font-size:15px; max-width:70ch; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .chip{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 10px; display:flex; align-items:center; gap:6px; }
+  .chip b{ color:var(--text); font-weight:600; }
+
+  .summary{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .summary .cell{ background:var(--surface); padding:16px 18px; display:flex; flex-direction:column; gap:4px; }
+  .summary .cell .num{ font-family:'Outfit',system-ui,sans-serif; font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .summary .cell .label{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .summary .cell.ok .num{ color:var(--success); }
+  .summary .cell.acc .num{ color:var(--accent-strong); }
+
+  nav.toc{ display:flex; flex-wrap:wrap; gap:8px; }
+  nav.toc a{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:6px 12px; text-decoration:none; }
+  nav.toc a:hover{ border-color:var(--accent); }
+
+  section{ display:flex; flex-direction:column; gap:16px; scroll-margin-top:20px; }
+  .section-head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .section-head h2{ font-size:21px; font-weight:700; }
+  .section-head .count{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); background:var(--surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:20px; }
+  .section-desc{ color:var(--text-dim); font-size:14px; line-height:1.6; max-width:74ch; }
+  .section-desc code{ font-size:12.5px; }
+
+  code{ font-family:'IBM Plex Mono',monospace; background:var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; color:var(--text); }
+
+  .res-table{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface); }
+  .res-row{ display:grid; grid-template-columns:1fr 1.6fr 2fr; gap:14px; padding:12px 16px; align-items:center; border-top:1px solid var(--border); }
+  .res-row:first-child{ border-top:none; background:var(--surface-2); }
+  .res-row.head{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); font-weight:600; }
+  .res-row .name{ font-weight:600; font-size:14px; }
+  .res-row .fields{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); }
+  .res-row .rule{ font-size:12.5px; color:var(--text-dim); }
+  @media (max-width:640px){ .res-row{ grid-template-columns:1fr; gap:4px; } .res-row.head{ display:none; } }
+
+  .folder-tree{ background:var(--code-bg); color:var(--code-text); border-radius:9px; padding:16px 18px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.7; overflow-x:auto; }
+  .folder-tree .c{ color:var(--text-dim); opacity:.75; }
+  .folder-tree .k{ color:var(--code-key); }
+
+  .swatches{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .swatch{ border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface); }
+  .swatch .fill{ height:44px; }
+  .swatch .info{ padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); }
+  .swatch .info b{ display:block; color:var(--text); font-size:12.5px; font-weight:600; font-family:'Manrope',sans-serif; margin-bottom:2px; }
+
+  .chips-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .comp-chip{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:6px 11px; }
+
+  .screen-grid{ display:flex; flex-direction:column; gap:22px; }
+  .screen-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .screen-head{ padding:16px 20px 0; display:flex; flex-direction:column; gap:6px; }
+  .screen-head .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .screen-head h3{ font-size:16.5px; font-weight:700; }
+  .route-tag{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong); background:var(--surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:6px; }
+  .guard-tag{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); background:var(--surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:6px; }
+  .screen-head p{ color:var(--text-dim); font-size:13.5px; line-height:1.6; margin:2px 0 0; }
+  .screen-head .sources{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .screen-head .sources code{ font-size:11.5px; }
+  .shot-frame{ border-top:1px solid var(--border); margin-top:14px; background:var(--surface-2); }
+  .shot-frame .scroll{ max-height:460px; overflow-y:auto; }
+  .shot-frame img{ display:block; width:100%; }
+
+  .edge-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+  .edge-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .edge-card .head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .edge-card h3{ font-size:15px; font-weight:600; }
+  .edge-card p{ color:var(--text-dim); font-size:13.5px; line-height:1.6; margin:0; }
+  .tag-bug{ font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-border); }
+  .tag-decision{ font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border); }
+
+  pre.code{ background:var(--code-bg); color:var(--code-text); border-radius:9px; padding:13px 15px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.6; overflow-x:auto; margin:0; }
+  .k{ color:var(--code-key); } .s{ color:var(--code-str); } .n{ color:var(--code-num); }
+
+  .pend-list{ display:flex; flex-direction:column; gap:10px; }
+  .pend-item{ display:flex; gap:12px; align-items:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .pend-item .mark{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--warning); background:var(--warning-bg); border:1px solid var(--warning-border); border-radius:6px; padding:2px 7px; flex-shrink:0; margin-top:1px; }
+  .pend-item p{ margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.55; }
+  .pend-item p b{ color:var(--text); }
+
+  footer{ border-top:1px solid var(--border); padding-top:18px; color:var(--text-dim); font-size:13px; display:flex; flex-wrap:wrap; gap:6px 16px; }
+  footer .fk{ color:var(--text); font-weight:600; }
+  a.back{ font-size:13px; color:var(--accent-strong); text-decoration:none; font-weight:600; }
+  a.back:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span> Frontend Angular · ColdChainTracker</div>
+    <h1>Documentação do Frontend</h1>
+    <p class="sub">Painel B2B de rastreabilidade de cadeia fria: conecta fornecedor, transportadora e destinatário numa mesma viagem, com monitoramento de temperatura em tempo real via sensores IoT e emissão de certificados de conformidade sanitária. Construído sobre a mesma API documentada em <a href="../api-test-reports/index.html" style="color:var(--accent-strong);">api-test-reports/</a> — todas as telas abaixo usam dados reais, nenhuma é mockada.</p>
+    <div class="meta-row">
+      <span class="chip">🅰️ Angular <b>22.2.0-rc.0</b> · standalone + Signals</span>
+      <span class="chip">🎨 SCSS · design tokens próprios</span>
+      <span class="chip">🔌 ng-openapi-gen · cliente HTTP gerado</span>
+      <span class="chip">🗓️ <b>21/09/2026</b></span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="cell ok"><span class="num">16</span><span class="label">telas implementadas</span></div>
+    <div class="cell ok"><span class="num">29</span><span class="label">specs passando</span></div>
+    <div class="cell acc"><span class="num">13</span><span class="label">componentes reutilizáveis</span></div>
+    <div class="cell"><span class="num">0</span><span class="label">dados estáticos/mockados</span></div>
+  </div>
+
+  <nav class="toc">
+    <a href="#arquitetura">Arquitetura</a>
+    <a href="#auth">Autenticação</a>
+    <a href="#design-system">Design system</a>
+    <a href="#telas">Tour pelas telas</a>
+    <a href="#notas-tecnicas">Notas técnicas</a>
+    <a href="#pendencias">Pendências</a>
+  </nav>
+
+  <section id="arquitetura">
+    <div class="section-head"><h2>Arquitetura</h2><span class="count">standalone · signals · sem NgRx</span></div>
+    <p class="section-desc">Sem <code>NgModule</code>, sem gerenciador de estado à parte — o volume de estado do app não justifica NgRx; <code>HttpClient</code> + signals resolve tudo. Cada componente mora na própria pasta com seu <code>.html</code>/<code>.scss</code>/<code>.spec.ts</code> próprios.</p>
+    <div class="res-table">
+      <div class="res-row head"><span>Decisão</span><span>Como</span><span>Por quê</span></div>
+      <div class="res-row"><span class="name">Estado</span><span class="fields">Angular Signals (<code>signal</code>/<code>computed</code>/<code>effect</code>)</span><span class="rule">Sem state manager externo — o app não tem estado compartilhado complexo o bastante pra justificar</span></div>
+      <div class="res-row"><span class="name">Cliente HTTP</span><span class="fields"><code>ng-openapi-gen</code> a partir de <code>/v3/api-docs</code> ao vivo</span><span class="rule">Tipos e services nunca são escritos à mão — o DTO gerado é a fonte da verdade</span></div>
+      <div class="res-row"><span class="name">Rotas</span><span class="fields">Lazy <code>loadComponent</code> por feature + guards funcionais</span><span class="rule">Cada tela carrega só quando acessada; guards como <code>CanActivateFn</code>, não classes</span></div>
+      <div class="res-row"><span class="name">Formulários</span><span class="fields"><code>FormsModule</code> + <code>ngModel</code> ligado a signals via <code>model()</code></span><span class="rule">Poucos formulários no app (login/registro/busca) — não precisou de Reactive Forms</span></div>
+      <div class="res-row"><span class="name">Estilo</span><span class="fields">SCSS com CSS custom properties, sem framework de UI</span><span class="rule">Design system próprio, tokens extraídos direto dos mockups aprovados</span></div>
+    </div>
+    <div class="folder-tree">src/app/<br>
+&nbsp;&nbsp;<span class="k">core/</span> <span class="c">— shell (header+sidebar), guards, interceptors, CurrentUserService, PageTitleService, TelemetryService</span><br>
+&nbsp;&nbsp;<span class="k">shared/</span> <span class="c">— StatusPill, CargoTypeBadge, SearchBox, DataTable, Card, Button, ToolbarTabs, AdminSubnav...</span><br>
+&nbsp;&nbsp;<span class="k">api/</span> <span class="c">— cliente HTTP GERADO (nunca editado à mão — regenerar com `npm run generate:api`)</span><br>
+&nbsp;&nbsp;<span class="k">features/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;auth/ dashboard/ viagens/ frota/ lotes/ alertas/ relatorios/ admin/
+    </div>
+  </section>
+
+  <section id="auth">
+    <div class="section-head"><h2>Autenticação (stand-in)</h2><span class="count">sem senha real ainda</span></div>
+    <p class="section-desc">A API ainda não tem login/JWT — todo request carrega um header <code>X-User-Id</code> que identifica o usuário atual (ver <a href="../api-test-reports/parte1-trips-swagger.html" style="color:var(--accent-strong);">parte1</a>, passo 5). O frontend decidiu simular a experiência de login sem inventar autenticação que a API não tem:</p>
+    <div class="edge-grid">
+      <div class="edge-card">
+        <div class="head"><span class="tag-decision">decisão</span></div>
+        <h3>Login por e-mail, senha decorativa</h3>
+        <p><code>CurrentUserService.loginByEmail()</code> busca o usuário por e-mail em <code>GET /api/users</code> e usa o <code>id</code> encontrado como <code>X-User-Id</code> daí em diante. O campo de senha existe na tela (fiel ao mockup) mas nunca é validado — não há endpoint pra isso ainda.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-decision">decisão</span></div>
+        <h3>Cadastro público via admin oculto</h3>
+        <p><code>POST /api/users</code> exige um <code>X-User-Id</code> de alguém já autenticado — mas a tela de Registro precisa funcionar para quem ainda não tem conta. A tela usa o admin global do sistema como "ator oculto" só pra essa chamada específica, depois já loga o usuário recém-criado normalmente.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">xUserIdInterceptor</span></div>
+        <h3>Interceptor funcional injeta o header</h3>
+        <p>Todo request HTTP passa por um <code>HttpInterceptorFn</code> que lê o <code>userId()</code> atual do <code>CurrentUserService</code> (ou o admin global, antes do login) e injeta <code>X-User-Id</code> automaticamente — nenhuma tela precisa se preocupar com isso.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">authGuard · adminRoleGuard</span></div>
+        <h3>Guards funcionais</h3>
+        <p><code>authGuard</code> protege tudo dentro do <code>Shell</code> (redireciona pra <code>/login</code> sem sessão). <code>adminRoleGuard</code> protege <code>/admin/*</code> exigindo <code>ROLE_ADMIN</code> ou <code>ROLE_COMPANY_ADMIN</code> — testado de verdade via Playwright: um usuário <code>ROLE_OPERATOR</code> tentando acessar é redirecionado pro dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="design-system">
+    <div class="section-head"><h2>Design system</h2><span class="count">tokens + 13 componentes compartilhados</span></div>
+    <p class="section-desc">Paleta extraída dos mockups aprovados (<code>design-references/*.html</code>) e transformada em CSS custom properties globais — nenhum hex solto no meio dos componentes.</p>
+    <div class="swatches">
+      <div class="swatch"><div class="fill" style="background:#1ca7e0;"></div><div class="info"><b>--accent</b>#1ca7e0</div></div>
+      <div class="swatch"><div class="fill" style="background:#0b4f8f;"></div><div class="info"><b>--accent-strong</b>#0b4f8f</div></div>
+      <div class="swatch"><div class="fill" style="background:#1a8a52;"></div><div class="info"><b>--success</b>#1a8a52</div></div>
+      <div class="swatch"><div class="fill" style="background:#c8342a;"></div><div class="info"><b>--danger</b>#c8342a</div></div>
+      <div class="swatch"><div class="fill" style="background:#a9720b;"></div><div class="info"><b>--warning</b>#a9720b</div></div>
+      <div class="swatch"><div class="fill" style="background:#14233d;"></div><div class="info"><b>--text</b>#14233d</div></div>
+      <div class="swatch"><div class="fill" style="background:#f3f7fb;border-bottom:1px solid #d6e2ee;"></div><div class="info"><b>--bg</b>#f3f7fb</div></div>
+      <div class="swatch"><div class="fill" style="background:#ffffff;border-bottom:1px solid #d6e2ee;"></div><div class="info"><b>--surface</b>#ffffff</div></div>
+    </div>
+    <p class="section-desc" style="margin-top:6px;">Componentes reutilizados entre as 7 features, em vez de duplicar markup:</p>
+    <div class="chips-grid">
+      <span class="comp-chip">StatusPill</span>
+      <span class="comp-chip">CargoTypeBadge</span>
+      <span class="comp-chip">SearchBox</span>
+      <span class="comp-chip">ToolbarTabs</span>
+      <span class="comp-chip">Card</span>
+      <span class="comp-chip">DataTable</span>
+      <span class="comp-chip">Button (directive)</span>
+      <span class="comp-chip">AdminSubnav</span>
+      <span class="comp-chip">ComingSoon</span>
+      <span class="comp-chip">Header</span>
+      <span class="comp-chip">Sidebar</span>
+      <span class="comp-chip">Shell</span>
+      <span class="comp-chip">PageTitleService</span>
+    </div>
+  </section>
+
+  <section id="telas">
+    <div class="section-head"><h2>Tour pelas telas</h2><span class="count">16 rotas · screenshots reais desta rodada</span></div>
+    <p class="section-desc">Cada screenshot abaixo foi capturado agora, logado como admin, navegando pelo app real (<code>localhost:4200</code>) contra a API real (<code>localhost:8080</code>) — sem mock de rede em nenhuma tela.</p>
+
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Login / Registro</h3><span class="route-tag">/login · /registro</span></div>
+          <p>Login por e-mail (senha decorativa) e cadastro público via admin oculto — ver seção Autenticação acima.</p>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/01-login.png" alt="Tela de login"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Dashboard</h3><span class="route-tag">/dashboard</span><span class="guard-tag">authGuard</span></div>
+          <p>KPIs de viagens ativas, alertas do dia e conformidade do período (donut calculado a partir dos relatórios reais), tabela de viagens em andamento e lista de alertas recentes.</p>
+          <div class="sources">Fontes: <code>GET /api/trips</code> · <code>GET /api/alerts</code> · <code>GET /api/reports</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/02-dashboard.png" alt="Dashboard"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Viagens — lista</h3><span class="route-tag">/viagens</span><span class="guard-tag">authGuard</span></div>
+          <p>Busca, abas por status, temperatura atual derivada do alerta mais recente da viagem (ou da última leitura de telemetria, se não houver alerta ativo).</p>
+          <div class="sources">Fontes: <code>GET /api/trips</code> · <code>GET /api/alerts</code> · <code>GET /api/trips/{id}/telemetry/history</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/03-viagens-lista.png" alt="Lista de viagens"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Viagens — detalhe</h3><span class="route-tag">/viagens/:id</span><span class="guard-tag">authGuard</span></div>
+          <p>Gráfico de temperatura <b>ao vivo</b> via SSE (implementado com <code>fetch</code> + <code>ReadableStream</code>, já que o endpoint exige o header <code>X-User-Id</code> que o <code>EventSource</code> nativo não suporta), lote anexado e linha do tempo da viagem.</p>
+          <div class="sources">Fontes: <code>GET /api/trips/{id}</code> · <code>GET /api/trips/{id}/telemetry/history</code> · <code>GET /api/trips/{id}/telemetry/stream</code> (SSE) · <code>GET /api/alerts?tripId=</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/04-viagem-detalhe.png" alt="Detalhe de viagem com gráfico ao vivo"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Frota — Veículos / Motoristas</h3><span class="route-tag">/frota</span><span class="guard-tag">authGuard</span></div>
+          <p>Uma única tela com abas Veículos/Motoristas. Status ("EM VIAGEM"/"DISPONÍVEL"/"EM MANUTENÇÃO") é <b>derivado</b> de viagens em andamento reais, não um campo fixo.</p>
+          <div class="sources">Fontes: <code>GET /api/vehicles</code> · <code>GET /api/drivers</code> · <code>GET /api/trips</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/05-frota-veiculos.png" alt="Lista de veículos"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Veículo — detalhe</h3><span class="route-tag">/frota/veiculos/:id</span><span class="guard-tag">authGuard</span></div>
+          <p>Histórico de viagens do veículo e dados reais (placa, modelo, capacidade). O mockup original tinha campos fictícios ("Ano", "Motorista habitual", painel de "Manutenção" com datas inventadas) que não existem no backend — removidos em vez de fabricados.</p>
+          <div class="sources">Fontes: <code>GET /api/vehicles/{id}</code> · <code>GET /api/trips</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/06-veiculo-detalhe.png" alt="Detalhe de veículo"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Motorista — detalhe</h3><span class="route-tag">/frota/motoristas/:id</span><span class="guard-tag">authGuard</span></div>
+          <p>Histórico de viagens e um painel de "Desempenho" (viagens concluídas + conformidade média) calculado de verdade a partir dos relatórios do motorista — não um número decorativo do mockup.</p>
+          <div class="sources">Fontes: <code>GET /api/drivers/{id}</code> · <code>GET /api/trips</code> · <code>GET /api/reports</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/07-motorista-detalhe.png" alt="Detalhe de motorista"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Lotes de Carga</h3><span class="route-tag">/lotes</span><span class="guard-tag">authGuard</span></div>
+          <p>Status ("Aguardando embarque"/"Em trânsito"/"Entregue") derivado da viagem à qual o lote está vinculado. A coluna "Produto" do mockup (nomes fictícios como "Peito de frango congelado") foi trocada por "Fornecedor", campo real. Detalhe do lote (<code>/lotes/:id</code>) ainda não tem mockup aprovado — pendência conhecida, ver abaixo.</p>
+          <div class="sources">Fontes: <code>GET /api/meat-batches</code> · <code>GET /api/trips</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/08-lotes-lista.png" alt="Lista de lotes de carga"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Alertas — lista</h3><span class="route-tag">/alertas</span><span class="guard-tag">authGuard</span></div>
+          <p>Abas por severidade, busca por viagem/sensor. Lista limitada aos 50 mais recentes (ver bug corrigido na seção de notas técnicas).</p>
+          <div class="sources">Fontes: <code>GET /api/alerts</code> · <code>GET /api/trips</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/09-alertas-lista.png" alt="Lista de alertas"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Alerta — detalhe</h3><span class="route-tag">/alertas/:id</span><span class="guard-tag">authGuard</span></div>
+          <p>Gráfico snapshot (não ao vivo — é um evento passado) da janela de telemetria em torno do momento da excursão térmica, com bandas de limite dinâmicas conforme o tipo de carga. Sem <code>GET /api/alerts/{id}</code> no backend — busca a lista completa e filtra pelo id no cliente.</p>
+          <div class="sources">Fontes: <code>GET /api/alerts</code> · <code>GET /api/trips/{id}</code> · <code>GET /api/trips/{id}/telemetry/history</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/10-alerta-detalhe.png" alt="Detalhe de alerta"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Relatórios — lista</h3><span class="route-tag">/relatorios</span><span class="guard-tag">authGuard</span></div>
+          <p>Abas Conformes/Não conformes, e um botão de download que baixa um PDF <b>real</b> gerado pela API (<code>GET /api/reports/{id}/pdf</code>) — testado ponta a ponta via Playwright, arquivo <code>%PDF</code> válido de verdade.</p>
+          <div class="sources">Fontes: <code>GET /api/reports</code> · <code>GET /api/reports/{id}/pdf</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/11-relatorios-lista.png" alt="Lista de relatórios"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Relatório — detalhe</h3><span class="route-tag">/relatorios/:id</span><span class="guard-tag">authGuard</span></div>
+          <p>Renderiza o certificado como um "documento" visual (identificação, resumo estatístico, conclusão) a partir dos mesmos dados estruturados que a API retorna — <b>sem</b> expor o template interno que o backend usa pra gerar o PDF, que são coisas diferentes.</p>
+          <div class="sources">Fontes: <code>GET /api/reports/{id}</code> · <code>GET /api/trips/{id}</code> · <code>GET /api/drivers/{id}</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/12-relatorio-detalhe.png" alt="Detalhe de relatório, exemplo não conforme"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Administração — Empresas</h3><span class="route-tag">/admin/empresas</span><span class="guard-tag">adminRoleGuard</span></div>
+          <p>Somente leitura. Contagem de usuários por empresa calculada de verdade (cruzando com <code>/api/users</code>) — o mockup tinha uma coluna "Status: Ativa" fixa sem campo real por trás, removida.</p>
+          <div class="sources">Fontes: <code>GET /api/companies</code> · <code>GET /api/users</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/13-admin-empresas.png" alt="Administração de empresas"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Administração — Usuários</h3><span class="route-tag">/admin/usuarios</span><span class="guard-tag">adminRoleGuard</span></div>
+          <p>Status Ativo/Inativo usa o campo real <code>active</code> do usuário. A coluna "Último acesso" do mockup foi removida — não existe rastreamento de sessão no backend ainda, e inventar essa data seria mentir com dado falso.</p>
+          <div class="sources">Fontes: <code>GET /api/users</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/14-admin-usuarios.png" alt="Administração de usuários"></div></div>
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-head">
+          <div class="row"><h3>Administração — Limites de Conformidade</h3><span class="route-tag">/admin/limites</span><span class="guard-tag">adminRoleGuard</span></div>
+          <p>Referência somente-leitura das faixas ANVISA, direto do endpoint público de thresholds — os mesmos valores usados pelo backend pra calcular todo o resto do app.</p>
+          <div class="sources">Fontes: <code>GET /api/compliance-thresholds</code></div>
+        </div>
+        <div class="shot-frame"><div class="scroll"><img src="img/15-admin-limites.png" alt="Limites de conformidade"></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="notas-tecnicas">
+    <div class="section-head"><h2>Notas técnicas</h2><span class="count">bugs reais encontrados testando com dados de produção</span></div>
+    <p class="section-desc">Testar só com listas vazias ou 2-3 registros de exemplo não prova que o frontend aguenta dado real — os problemas abaixo só apareceram ao navegar o app de verdade contra a API com centenas de registros (simulações de estresse rodadas em branches anteriores).</p>
+    <div class="edge-grid">
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3>Interceptor de blob→JSON não rodava nos testes unitários</h3>
+        <p>Todo endpoint gerado pelo <code>ng-openapi-gen</code> pede <code>responseType: 'blob'</code> por padrão — um interceptor próprio (<code>jsonBlobInterceptor</code>) converte de volta pra JSON com base no <code>Content-Type</code> real da resposta. Nos specs, o mock de resposta não incluía o header <code>Content-Type</code>, então o interceptor nunca reconhecia o corpo como JSON — os componentes recebiam um <code>Blob</code> cru e travavam ao chamar <code>.filter()</code> nele. Corrigido definindo o header explicitamente em todo mock de teste HTTP do projeto.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3><code>null</code> vs <code>undefined</code> quebrando <code>.toFixed()</code></h3>
+        <p>Vários campos numéricos opcionais (temperatura de pico, médias) vêm como JSON <code>null</code> explícito quando não há leituras ainda — não <code>undefined</code>. Checagens como <code>if (valor !== undefined)</code> deixavam passar o <code>null</code> e o <code>.toFixed()</code> seguinte quebrava a tela inteira. Corrigido trocando por <code>!= null</code> (que cobre os dois) em todo o app.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3>Listas sem limite viravam páginas de 16.000px</h3>
+        <p>Uma viagem de teste de estresse tinha 272 alertas reais. Tanto a lista de Alertas quanto a linha do tempo do detalhe de viagem renderizavam todas as linhas sem limite — a página ficava absurdamente comprida e ilegível. Corrigido limitando a exibição (50 na lista de alertas, 10 na linha do tempo), com nota explícita de quantos itens estão sendo omitidos.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3>Gráficos de temperatura ilegíveis com muitas leituras</h3>
+        <p>O mesmo caso de estresse (milhares de leituras numa janela de tempo curta) deixava os gráficos SVG de temperatura virando uma parede de pontos sobrepostos. Corrigido com downsampling (amostragem uniforme até 120 pontos) nos gráficos de Viagem e de Alerta.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3><code>NG0950</code> — input obrigatório lido cedo demais</h3>
+        <p>As telas de detalhe de Veículo e Motorista liam o input <code>id()</code> (obrigatório, vindo do parâmetro de rota) direto no construtor — antes do Angular terminar de vincular o valor, o que derrubava o componente com <code>NG0950</code> nos testes. Corrigido envolvendo o carregamento de dados num <code>effect()</code>, que só roda depois da primeira vinculação — mesmo padrão que o detalhe de Viagem já usava.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="tag-bug">bug corrigido</span></div>
+        <h3>Sidebar não ia até o fim da página</h3>
+        <p>O host do componente Sidebar tinha <code>height:100%</code> explícito, o que quebra o <code>align-items:stretch</code> implícito do flexbox (só funciona quando a altura é <code>auto</code>). Corrigido mantendo <code>height:100%</code> só no elemento interno, e <code>display:block</code> (sem altura fixa) no host.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="pendencias">
+    <div class="section-head"><h2>Pendências e decisões conscientes</h2><span class="count">nada disso é esquecimento</span></div>
+    <p class="section-desc">Cada item abaixo foi uma escolha deliberada — nunca inventar uma tela ou campo que não tem mockup aprovado ou dado real por trás, mesmo quando o mockup original sugeria algo mais.</p>
+    <div class="pend-list">
+      <div class="pend-item"><span class="mark">sem mockup</span><p><b>Detalhe de Lote (<code>/lotes/:id</code>)</b> não foi implementado — existe mockup aprovado da lista, mas não do drill-down. A rota permanece como "em desenvolvimento" até esse mockup existir.</p></div>
+      <div class="pend-item"><span class="mark">decorativo</span><p>Botões de criação ("Nova Viagem", "Novo Veículo", "Novo Motorista", "Nova Empresa", "Convidar Usuário", "Novo Lote") aparecem fiéis ao mockup mas não abrem nenhum formulário — nenhuma dessas telas de criação foi desenhada ainda.</p></div>
+      <div class="pend-item"><span class="mark">decorativo</span><p>"Ver no mapa" (detalhe de viagem) e "Reenviar por e-mail" (detalhe de relatório) não têm endpoint ou mockup de destino — mantidos visualmente fiéis ao mockup, sem ação real.</p></div>
+      <div class="pend-item"><span class="mark">decorativo</span><p>Campo de senha no Login/Registro nunca é validado — ver seção Autenticação acima.</p></div>
+      <div class="pend-item"><span class="mark">tema</span><p>Só o tema claro está implementado. Os tokens de design já têm um bloco <code>dark.*</code> reservado nos mockups pra um tema escuro futuro.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span><span class="fk">Testes:</span> 29 specs (<code>ng test</code>), um arquivo por componente, cobrindo carregamento inicial e injeção de dependências.</span>
+    <span><span class="fk">Verificação visual:</span> cada branch foi conferida com Playwright real contra o app rodando, comparando com o mockup aprovado antes do commit.</span>
+  </footer>
+
+  <a class="back" href="../api-test-reports/index.html">← Relatórios de teste da API</a>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatórios de Teste — ColdChainTracker API</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Manrope:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+  :root{
+    --bg:#f3f7fb; --surface:#ffffff; --border:#d6e2ee; --text:#14233d; --text-dim:#56698a;
+    --accent:#1ca7e0; --accent-strong:#0b4f8f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#081420; --surface:#0f1e30; --border:#20374f; --text:#e9f1fb; --text-dim:#94a9c9; --accent:#5cc8f5; --accent-strong:#8fdcff; }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'Manrope',system-ui,sans-serif; padding:40px 16px; }
+  .wrap{ max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:28px; }
+  h1{ font-family:'Outfit',system-ui,sans-serif; font-size:26px; margin:0; }
+  p.sub{ color:var(--text-dim); margin:0; font-size:14.5px; }
+  .cards{ display:flex; flex-direction:column; gap:14px; }
+  a.card{
+    display:block; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:18px 20px; text-decoration:none; color:var(--text);
+  }
+  a.card:hover{ border-color:var(--accent); }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--accent-strong); text-transform:uppercase; letter-spacing:0.08em; }
+  .card h2{ font-family:'Outfit',system-ui,sans-serif; font-size:18px; margin:4px 0 6px; }
+  .card p{ color:var(--text-dim); font-size:13.5px; margin:0; line-height:1.5; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <h1>Relatórios de teste — ColdChainTracker API</h1>
+      <p class="sub">Execução real via Playwright contra a API local (Spring Boot + Postgres + InfluxDB + Mosquitto). Abra qualquer um dos dois arquivos abaixo diretamente no navegador.</p>
+    </div>
+    <div class="cards">
+      <a class="card" href="parte1-trips-swagger.html">
+        <div class="eyebrow">Parte 1</div>
+        <h2>Swagger UI + módulo Trips</h2>
+        <p>Navegação pelo Swagger, listagem e detalhe de trips, e validação do guard de autenticação (X-User-Id).</p>
+      </a>
+      <a class="card" href="parte2-cobertura-completa.html">
+        <div class="eyebrow">Parte 2</div>
+        <h2>Cobertura completa da API</h2>
+        <p>Companies, Vehicles, Drivers, Meat Batches, Users, Compliance Thresholds, regras de negócio (RN-08, transições de status) e o pipeline completo MQTT → SSE → InfluxDB → Relatório de conformidade.</p>
+      </a>
+      <a class="card" href="pdf/LC-2026-000003.pdf">
+        <div class="eyebrow">PDF · GET /api/reports/{id}/pdf</div>
+        <h2>Certificado de Conformidade — LC-2026-000003</h2>
+        <p>Agora a própria API gera isso — endpoint novo, implementado com Flying Saucer + OpenPDF (Java puro, sem browser). Template em <code>pdf/ReportPdfRenderer.java.txt</code>: manda um design que eu ajusto e a API passa a emitir nesse formato.</p>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

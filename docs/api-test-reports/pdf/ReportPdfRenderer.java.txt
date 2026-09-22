@@ -1,0 +1,224 @@
+package com.coldchain.coldchain_tracker.domain.report.service;
+
+import com.coldchain.coldchain_tracker.domain.report.dto.ExcursionEventResponse;
+import com.coldchain.coldchain_tracker.domain.report.dto.ReportResponse;
+import com.coldchain.coldchain_tracker.domain.report.enums.ReportStatus;
+import com.coldchain.coldchain_tracker.domain.report.enums.ReportType;
+import org.springframework.stereotype.Component;
+import org.xhtmlrenderer.pdf.ITextRenderer;
+
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * Renders a {@link ReportResponse} as a PDF, for {@code GET /api/reports/{id}/pdf}.
+ * <p>
+ * Builds an internal XHTML string (never exposed by any endpoint — only the resulting PDF bytes
+ * are returned) and hands it to Flying Saucer/OpenPDF, a pure-Java renderer, so no headless
+ * browser or external service is required. Flying Saucer only supports CSS 2.1 (no flexbox,
+ * grid, or custom properties), so the layout below is table-based on purpose.
+ */
+@Component
+public class ReportPdfRenderer {
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    public byte[] render(ReportResponse report) {
+        String xhtml = buildXhtml(report);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocumentFromString(xhtml);
+        renderer.layout();
+        renderer.createPDF(out);
+        return out.toByteArray();
+    }
+
+    private String buildXhtml(ReportResponse r) {
+        ReportResponse.Identification id = r.identification();
+        ReportResponse.Equipment eq = r.equipment();
+        ReportResponse.Parameters p = r.parameters();
+        ReportResponse.StatisticalSummary s = r.statisticalSummary();
+        ReportResponse.Audit audit = r.audit();
+
+        StatusStyle status = StatusStyle.of(r.status());
+        String reportTypeLabel = r.reportType() == ReportType.COMPLIANCE_CERTIFICATE
+                ? "Certificado de Conformidade Sanitária" : "Relatório de Excursão Térmica";
+        String meatTypeLabel = p.meatType() == null ? "—"
+                : p.meatType() == com.coldchain.coldchain_tracker.domain.batch.enums.MeatType.CHILLED
+                        ? "Resfriada (CHILLED)" : "Congelada (FROZEN)";
+
+        StringBuilder html = new StringBuilder();
+        html.append("""
+                <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+                <html xmlns="http://www.w3.org/1999/xhtml">
+                <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+                <title>Relatorio</title>
+                <style type="text/css">
+                    @page { size: A4; margin: 16mm 14mm; }
+                    body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #14233d; }
+                    table { border-collapse: collapse; width: 100%; }
+                    .letterhead { border-bottom: 2px solid #0b4f8f; padding-bottom: 8px; margin-bottom: 12px; }
+                    .brand-mark { width: 26px; height: 26px; background-color: #1ca7e0; border-radius: 13px; }
+                    .brand-name { font-size: 15px; font-weight: bold; color: #14233d; }
+                    .brand-sub { font-size: 8px; color: #56698a; letter-spacing: 1px; }
+                    .doc-meta { font-size: 9px; color: #56698a; text-align: right; }
+                    .doc-meta b { color: #14233d; font-size: 10px; }
+                    h1 { font-size: 15px; margin: 0 0 2px 0; }
+                    .subtitle { font-size: 9.5px; color: #56698a; margin: 0 0 8px 0; }
+                    .status-badge { font-size: 9px; font-weight: bold; padding: 4px 10px; }
+                    .section-title { font-size: 8.5px; text-transform: uppercase; color: #0b4f8f; font-weight: bold;
+                        border-bottom: 1px solid #d6e2ee; padding-bottom: 4px; margin-bottom: 6px; }
+                    .fields td { padding: 2px 0; font-size: 9.5px; }
+                    .fields td.k { color: #56698a; width: 38%; }
+                    .fields td.v { font-weight: bold; }
+                    table.stats th { text-align: left; font-size: 8.5px; text-transform: uppercase; color: #56698a;
+                        border-bottom: 1.5px solid #14233d; padding: 4px 6px; }
+                    table.stats td { padding: 4px 6px; border-bottom: 1px solid #d6e2ee; font-size: 9.5px; }
+                    table.stats td.num { text-align: right; font-weight: bold; }
+                    .conclusion { background-color: #e5f6ec; padding: 8px 10px; font-size: 9.5px; margin-top: 4px; }
+                    .conclusion .label { font-size: 8px; text-transform: uppercase; color: #0b4f8f; font-weight: bold; }
+                    .muted { color: #56698a; font-style: italic; }
+                    .sig-row td { padding-top: 30px; font-size: 8.5px; color: #56698a; border-top: 1px solid #14233d; }
+                    .sig-row td b { display: block; font-size: 9.5px; color: #14233d; }
+                    .footer { margin-top: 14px; padding-top: 6px; border-top: 1px solid #d6e2ee; font-size: 7.5px; color: #56698a; }
+                </style>
+                </head>
+                <body>
+                """);
+
+        html.append("<table class=\"letterhead\"><tr>")
+                .append("<td width=\"60%\"><table><tr>")
+                .append("<td width=\"30\"><div class=\"brand-mark\"></div></td>")
+                .append("<td><span class=\"brand-name\">ColdChainTracker</span><br/><span class=\"brand-sub\">RASTREABILIDADE DE CADEIA FRIA</span></td>")
+                .append("</tr></table></td>")
+                .append("<td width=\"40%\" class=\"doc-meta\">Relatório N&#176; <b>").append(esc(r.reportNumber())).append("</b><br/>")
+                .append("Gerado em ").append(fmtDate(r.generatedAt())).append(" UTC</td>")
+                .append("</tr></table>");
+
+        html.append("<h1>").append(esc(reportTypeLabel)).append("</h1>");
+        html.append("<p class=\"subtitle\">Rota ").append(esc(id.routeCode()))
+                .append(" &#8212; gerado automaticamente a partir das leituras de temperatura registradas durante o transporte</p>");
+        html.append("<span class=\"status-badge\" style=\"color:").append(status.fg).append(";background-color:")
+                .append(status.bg).append(";\">&#8226; ").append(status.label).append("</span>");
+
+        html.append("<table style=\"margin-top:14px;\"><tr>");
+        html.append("<td width=\"50%\" valign=\"top\">");
+        html.append("<div class=\"section-title\">Identificação da viagem</div>");
+        html.append("<table class=\"fields\">");
+        appendField(html, "Rota", esc(id.routeCode()));
+        appendField(html, "Período analisado", fmtDate(id.periodStart()) + " &#8211; " + fmtDate(id.periodEnd()) + " UTC");
+        appendField(html, "Local", esc(orDash(id.locationLabel())));
+        appendField(html, "Setor", esc(orDash(id.sectorLabel())));
+        if (id.generalNotes() != null && !id.generalNotes().isBlank()) {
+            appendField(html, "Observações", esc(id.generalNotes()));
+        }
+        html.append("</table></td>");
+
+        html.append("<td width=\"50%\" valign=\"top\">");
+        html.append("<div class=\"section-title\">Equipamento &amp; parâmetros</div>");
+        html.append("<table class=\"fields\">");
+        appendField(html, "Veículo", esc(eq.licensePlate()));
+        appendField(html, "Sensor", esc(eq.deviceId()));
+        appendField(html, "Tipo de carga", meatTypeLabel);
+        appendField(html, "Faixa segura", fmt(p.minTemperature()) + " a " + fmt(p.maxTemperature()) + " " + esc(p.unit()));
+        appendField(html, "Responsável técnico", esc(orDash(audit.technicalResponsibleUserName())));
+        appendField(html, "Versão do relatório", String.valueOf(audit.version()));
+        html.append("</table></td>");
+        html.append("</tr></table>");
+
+        html.append("<div class=\"section-title\" style=\"margin-top:14px;\">Resumo estatístico</div>");
+        html.append("<table class=\"stats\"><tr><th>Métrica</th><th style=\"text-align:right;\">Valor</th></tr>");
+        appendStat(html, "Leituras registradas", String.valueOf(s.readingCount()));
+        appendStat(html, "Leituras conformes", s.compliantReadingCount() + " de " + s.readingCount());
+        appendStat(html, "Leituras não conformes", String.valueOf(s.nonCompliantReadingCount()));
+        appendStat(html, "Temperatura mínima", fmt(s.minTemperature()) + " " + esc(p.unit()));
+        appendStat(html, "Temperatura máxima", fmt(s.maxTemperature()) + " " + esc(p.unit()));
+        appendStat(html, "Temperatura média", fmt(s.avgTemperature()) + " " + esc(p.unit()));
+        appendStat(html, "Mediana", fmt(s.medianTemperature()) + " " + esc(p.unit()));
+        appendStat(html, "Desvio padrão", fmt(s.stddevTemperature()) + " " + esc(p.unit()));
+        appendStat(html, "Tempo total fora da faixa (excursão térmica)", s.totalExcursionMinutes() + " min");
+        appendStat(html, "Eventos de excursão detectados", String.valueOf(s.excursionEventCount()));
+        html.append("</table>");
+
+        if (r.reportType() == ReportType.THERMAL_EXCURSION || s.excursionEventCount() > 0) {
+            html.append("<div class=\"section-title\" style=\"margin-top:14px;\">Eventos de excursão térmica</div>");
+            html.append("<table class=\"stats\"><tr><th>Início</th><th>Fim</th><th>Duração</th><th style=\"text-align:right;\">Pico</th><th>Nível</th></tr>");
+            if (r.excursionEvents().isEmpty()) {
+                html.append("<tr><td colspan=\"5\" class=\"muted\">Nenhum evento de excursão térmica detectado.</td></tr>");
+            } else {
+                for (ExcursionEventResponse ev : r.excursionEvents()) {
+                    html.append("<tr>")
+                            .append("<td>").append(fmtDate(ev.startTime())).append("</td>")
+                            .append("<td>").append(ev.endTime() != null ? fmtDate(ev.endTime()) : "em aberto").append("</td>")
+                            .append("<td>").append(ev.durationMinutes() != null ? ev.durationMinutes() + " min" : "—").append("</td>")
+                            .append("<td class=\"num\">").append(fmt(ev.peakTemperature())).append(" ").append(esc(p.unit())).append("</td>")
+                            .append("<td>").append(esc(ev.alertLevel() != null ? ev.alertLevel().name() : "—")).append("</td>")
+                            .append("</tr>");
+                }
+            }
+            html.append("</table>");
+        }
+
+        html.append("<div class=\"conclusion\"><div class=\"label\">Conclusão</div>")
+                .append(esc(r.conclusionText())).append("</div>");
+
+        html.append("<table class=\"sig-row\" style=\"margin-top:20px;\"><tr>")
+                .append("<td width=\"50%\"><b>").append(esc(audit.generatedByUserName())).append("</b>Gerado por &#8212; ColdChainTracker</td>")
+                .append("<td width=\"50%\"><b>").append(esc(orDash(audit.technicalResponsibleUserName()))).append("</b>Responsável técnico</td>")
+                .append("</tr></table>");
+
+        html.append("<div class=\"footer\">ColdChainTracker &#183; Documento gerado automaticamente pelo sistema &#8212; sem valor fiscal &#183; Trip ID: ")
+                .append(esc(id.tripId() != null ? id.tripId().toString() : "—")).append("</div>");
+
+        html.append("</body></html>");
+        return html.toString();
+    }
+
+    private static void appendField(StringBuilder html, String label, String value) {
+        html.append("<tr><td class=\"k\">").append(esc(label)).append("</td><td class=\"v\">").append(value).append("</td></tr>");
+    }
+
+    private static void appendStat(StringBuilder html, String label, String value) {
+        html.append("<tr><td>").append(esc(label)).append("</td><td class=\"num\">").append(value).append("</td></tr>");
+    }
+
+    private static String orDash(String value) {
+        return value == null || value.isBlank() ? "—" : value;
+    }
+
+    private static String fmt(BigDecimal value) {
+        return value == null ? "—" : value.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private static String fmtDate(OffsetDateTime value) {
+        return value == null ? "—" : value.withOffsetSameInstant(ZoneOffset.UTC).format(DATE_FMT);
+    }
+
+    /** Minimal XML escaping — every value interpolated into the template is user- or database-sourced. */
+    private static String esc(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private record StatusStyle(String label, String fg, String bg) {
+        static StatusStyle of(ReportStatus status) {
+            return switch (status) {
+                case COMPLIANT -> new StatusStyle("CONFORME", "#1a8f4c", "#e5f6ec");
+                case NON_COMPLIANT -> new StatusStyle("NÃO CONFORME", "#b93a2c", "#fbebe8");
+                case PENDING -> new StatusStyle("PENDENTE", "#8a6d1f", "#fbf3e0");
+            };
+        }
+    }
+}

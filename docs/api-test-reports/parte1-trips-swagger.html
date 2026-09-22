@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playwright API Run</title>
+<meta name="description" content="Execução real da ColdChainTracker API via Playwright: Swagger UI, chamadas HTTP e validação de autenticação, com screenshots e payloads.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f3f7fb;
+    --surface:#ffffff;
+    --surface-2:#eaf2f9;
+    --border:#d6e2ee;
+    --text:#14233d;
+    --text-dim:#56698a;
+    --accent:#1ca7e0;
+    --accent-strong:#0b4f8f;
+    --accent-ink:#ffffff;
+    --success:#1a8f4c;
+    --success-bg:#e5f6ec;
+    --success-border:#b6e3c7;
+    --danger:#b93a2c;
+    --danger-bg:#fbebe8;
+    --danger-border:#f0c4bb;
+    --line:#c3d5e6;
+    --code-bg:#0e1c2e;
+    --code-text:#d9e6f2;
+    --code-key:#5fc1ee;
+    --code-str:#f0b86e;
+    --code-num:#7fb3f5;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --bg:#081420;
+      --surface:#0f1e30;
+      --surface-2:#132840;
+      --border:#20374f;
+      --text:#e9f1fb;
+      --text-dim:#94a9c9;
+      --accent:#5cc8f5;
+      --accent-strong:#8fdcff;
+      --accent-ink:#04223f;
+      --success:#3ecb7c;
+      --success-bg:#0f2a1d;
+      --success-border:#1f4a34;
+      --danger:#ff8478;
+      --danger-bg:#321815;
+      --danger-border:#5a2a24;
+      --line:#25405c;
+      --code-bg:#081320;
+      --code-text:#d9e6f2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#081420;
+    --surface:#0f1e30;
+    --surface-2:#132840;
+    --border:#20374f;
+    --text:#e9f1fb;
+    --text-dim:#94a9c9;
+    --accent:#5cc8f5;
+    --accent-strong:#8fdcff;
+    --accent-ink:#04223f;
+    --success:#3ecb7c;
+    --success-bg:#0f2a1d;
+    --success-border:#1f4a34;
+    --danger:#ff8478;
+    --danger-bg:#321815;
+    --danger-border:#5a2a24;
+    --line:#25405c;
+    --code-bg:#081320;
+    --code-text:#d9e6f2;
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Manrope',system-ui,sans-serif;
+    padding-inline:16px;
+    padding-block:32px;
+  }
+  .page{ max-width:840px; margin:0 auto; display:flex; flex-direction:column; gap:36px; }
+
+  h1,h2,h3{ font-family:'Outfit',system-ui,sans-serif; letter-spacing:-0.01em; text-wrap:balance; margin:0; }
+
+  header.hero{ display:flex; flex-direction:column; gap:14px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--accent-strong);
+    text-transform:uppercase; letter-spacing:0.09em; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow .dot{ width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px var(--success-bg); }
+  h1{ font-size:clamp(26px,4.5vw,34px); font-weight:700; }
+  .sub{ color:var(--text-dim); font-size:15px; max-width:60ch; }
+
+  .meta-row{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;
+  }
+  .chip{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim);
+    background:var(--surface); border:1px solid var(--border); border-radius:7px;
+    padding:5px 10px; display:flex; align-items:center; gap:6px;
+  }
+  .chip b{ color:var(--text); font-weight:600; }
+
+  .summary{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1px;
+    background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  }
+  .summary .cell{ background:var(--surface); padding:16px 18px; display:flex; flex-direction:column; gap:4px; }
+  .summary .cell .num{ font-family:'Outfit',system-ui,sans-serif; font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .summary .cell .label{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .summary .cell.ok .num{ color:var(--success); }
+
+  .timeline{ display:flex; flex-direction:column; }
+  .step{ display:grid; grid-template-columns:34px 1fr; gap:16px; }
+  .rail{ display:flex; flex-direction:column; align-items:center; }
+  .rail .node{
+    width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; flex:none;
+    background:var(--surface-2); border:1.5px solid var(--border); color:var(--text-dim);
+  }
+  .step.ok .rail .node{ background:var(--success-bg); border-color:var(--success-border); color:var(--success); }
+  .step.expected .rail .node{ background:var(--surface-2); border-color:var(--accent); color:var(--accent-strong); }
+  .rail .stem{ width:2px; flex:1; background:var(--line); margin-block:2px; }
+  .step:last-child .rail .stem{ display:none; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:18px 20px 20px; margin-bottom:26px; display:flex; flex-direction:column; gap:12px;
+  }
+  .card-head{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  .method{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; padding:3px 8px;
+    border-radius:5px; letter-spacing:0.03em;
+  }
+  .method.get{ background:#e3edfb; color:#2456a8; }
+  .method.ui{ background:var(--surface-2); color:var(--text-dim); }
+  :root:not([data-theme="light"]) .method.get{ background:#132743; color:#8fb8f2; }
+  :root[data-theme="dark"] .method.get{ background:#132743; color:#8fb8f2; }
+  .path{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; color:var(--text); }
+  .status-pill{
+    margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:20px; border:1px solid;
+  }
+  .status-pill.s200{ background:var(--success-bg); color:var(--success); border-color:var(--success-border); }
+  .status-pill.s400{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border); }
+  .status-pill.neutral{ background:var(--surface-2); color:var(--text-dim); border-color:var(--border); }
+
+  .card h3{ font-size:16.5px; font-weight:600; }
+  .card p.desc{ color:var(--text-dim); font-size:14px; line-height:1.55; }
+
+  .shot-frame{
+    border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--surface-2);
+  }
+  .shot-frame .scroll{ max-height:340px; overflow-y:auto; }
+  .shot-frame img{ display:block; width:100%; }
+  .shot-caption{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);
+    padding:7px 10px; border-top:1px solid var(--border); background:var(--surface);
+  }
+
+  .shots-pair{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:560px){ .shots-pair{ grid-template-columns:1fr; } }
+
+  pre.code{
+    background:var(--code-bg); color:var(--code-text); border-radius:9px; padding:14px 16px;
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.6; overflow-x:auto;
+    margin:0;
+  }
+  .k{ color:var(--code-key); }
+  .s{ color:var(--code-str); }
+  .n{ color:var(--code-num); }
+
+  footer{
+    border-top:1px solid var(--border); padding-top:18px; color:var(--text-dim); font-size:13px;
+    display:flex; flex-wrap:wrap; gap:6px 16px;
+  }
+  footer .fk{ color:var(--text); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span> Execução ao vivo · Playwright + Chromium</div>
+    <h1>Relatório de teste — ColdChainTracker API</h1>
+    <p class="sub">Aplicação Spring Boot real subida localmente (Postgres, InfluxDB e Mosquitto via Docker), navegada e testada ponta a ponta com Playwright: Swagger UI, chamadas HTTP reais e verificação do guard de autenticação.</p>
+    <div class="meta-row">
+      <span class="chip">🌐 <b>localhost:8080</b></span>
+      <span class="chip">🍃 Spring Boot <b>4.1.1</b> · Java 21</span>
+      <span class="chip">🎭 Playwright <b>Chromium</b></span>
+      <span class="chip">🗓️ 2026-09-17</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="cell ok"><span class="num">6/6</span><span class="label">passos executados</span></div>
+    <div class="cell ok"><span class="num">2×200</span><span class="label">respostas OK</span></div>
+    <div class="cell ok"><span class="num">1×400</span><span class="label">bloqueio esperado</span></div>
+    <div class="cell"><span class="num">4</span><span class="label">screenshots</span></div>
+  </div>
+
+  <div class="timeline">
+
+    <div class="step ok">
+      <div class="rail"><div class="node">1</div><div class="stem"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method ui">UI</span>
+          <span class="path">/swagger-ui/index.html</span>
+          <span class="status-pill neutral">carregado</span>
+        </div>
+        <h3>Swagger UI abre com a especificação completa</h3>
+        <p class="desc">O Playwright navegou até o Swagger UI gerado pelo springdoc-openapi e esperou o carregamento da spec (<code>/v3/api-docs</code>). Todos os módulos aparecem: Trips, Reports, Compliance Thresholds, Users, Companies, Meat Batches e Vehicles.</p>
+        <div class="shot-frame">
+          <div class="scroll"><img src="screenshots/01-swagger-ui-home.png" alt="Swagger UI carregado com todos os endpoints da API"></div>
+          <div class="shot-caption">01-swagger-ui-home.png — role para ver a página inteira</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="rail"><div class="node">2</div><div class="stem"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method ui">UI</span>
+          <span class="path">Trips ▸ expandido</span>
+          <span class="status-pill neutral">interação</span>
+        </div>
+        <h3>Grupo "Trips" expandido via clique real</h3>
+        <p class="desc">Clique no cabeçalho da tag <b>Trips</b> — o agregado central da API (regras de multi-tenancy e RN-08 de incompatibilidade de carga resfriada/congelada ancoradas aqui).</p>
+        <div class="shot-frame">
+          <div class="scroll"><img src="screenshots/02-trips-tag-expanded.png" alt="Grupo Trips expandido no Swagger UI"></div>
+          <div class="shot-caption">02-trips-tag-expanded.png</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="rail"><div class="node">3</div><div class="stem"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/trips</span>
+          <span class="status-pill s200">200 OK</span>
+        </div>
+        <h3>Listagem de trips com usuário admin autenticado</h3>
+        <p class="desc">Chamada real feita de dentro do browser (<code>fetch</code>), com o header <code>X-User-Id</code> de um ROLE_ADMIN existente no Postgres. Retornou a trip de demonstração com veículo, motorista e as duas empresas ligadas.</p>
+        <pre class="code">GET <span class="s">/api/trips</span>
+X-User-Id: <span class="s">95d20122-5c7b-4be9-9fb0-91eccdc10d83</span>
+
+→ <span class="n">200</span> OK
+[
+  {
+    <span class="k">"id"</span>: <span class="s">"f3eafe7c-2e9f-425c-8c7e-cd6165ea9928"</span>,
+    <span class="k">"routeCode"</span>: <span class="s">"DEMO-ROUTE-01"</span>,
+    <span class="k">"vehicle"</span>: { <span class="k">"licensePlate"</span>: <span class="s">"DEMO123"</span>, <span class="k">"deviceId"</span>: <span class="s">"sim-sensor-01"</span> },
+    <span class="k">"driver"</span>: { <span class="k">"name"</span>: <span class="s">"Motorista Demo"</span> },
+    <span class="k">"originCompany"</span>: { <span class="k">"corporateName"</span>: <span class="s">"Frigorifico Demo Origem"</span> },
+    <span class="k">"destinationCompany"</span>: { <span class="k">"corporateName"</span>: <span class="s">"Mercado Demo Destino"</span> },
+    <span class="k">"status"</span>: <span class="s">"IN_PROGRESS"</span>,
+    <span class="k">"startedAt"</span>: <span class="s">"2026-09-14T01:56:00.78Z"</span>,
+    <span class="k">"meatBatches"</span>: []
+  }
+]</pre>
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="rail"><div class="node">4</div><div class="stem"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/trips/{id}</span>
+          <span class="status-pill s200">200 OK</span>
+        </div>
+        <h3>Busca da trip específica por id</h3>
+        <p class="desc">Usando o <code>id</code> retornado no passo anterior, confirma que <code>GET /api/trips/{id}</code> devolve o mesmo objeto completo — mesma regra de autorização do RN-05 (isolamento por empresa) validada.</p>
+        <pre class="code">GET <span class="s">/api/trips/f3eafe7c-2e9f-425c-8c7e-cd6165ea9928</span>
+X-User-Id: <span class="s">95d20122-5c7b-4be9-9fb0-91eccdc10d83</span>
+
+→ <span class="n">200</span> OK
+{ <span class="k">"routeCode"</span>: <span class="s">"DEMO-ROUTE-01"</span>, <span class="k">"status"</span>: <span class="s">"IN_PROGRESS"</span>, <span class="k">"finishedAt"</span>: null, … }</pre>
+      </div>
+    </div>
+
+    <div class="step expected">
+      <div class="rail"><div class="node">5</div><div class="stem"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/trips</span>
+          <span class="status-pill s400">400 esperado</span>
+        </div>
+        <h3>Guard de autenticação rejeita chamada sem header</h3>
+        <p class="desc">A mesma chamada sem <code>X-User-Id</code> deve falhar — e falhou como o esperado, confirmando que nenhum endpoint de trip é acessível sem identificação.</p>
+        <pre class="code">GET <span class="s">/api/trips</span>  <span style="color:var(--text-dim)">(sem X-User-Id)</span>
+
+→ <span class="n">400</span> Bad Request
+{
+  <span class="k">"status"</span>: <span class="n">400</span>,
+  <span class="k">"error"</span>: <span class="s">"Bad Request"</span>,
+  <span class="k">"message"</span>: <span class="s">"Required request header 'X-User-Id' for method parameter type UUID is not present"</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="rail"><div class="node">6</div></div>
+      <div class="card">
+        <div class="card-head">
+          <span class="method ui">UI</span>
+          <span class="path">Try it out ▸ GET /api/trips</span>
+          <span class="status-pill s200">200 OK</span>
+        </div>
+        <h3>Mesmo fluxo, agora pela interface do Swagger</h3>
+        <p class="desc">Para fechar, o teste repete a chamada pela própria UI: clica em "Try it out", preenche o campo <code>X-User-Id</code> e executa — o Swagger monta o cURL, faz a requisição real e mostra a resposta 200 com o JSON completo, idêntico ao obtido via fetch direto.</p>
+        <div class="shots-pair">
+          <div class="shot-frame">
+            <div class="scroll"><img src="screenshots/03-try-it-out-filled.png" alt="Campo X-User-Id preenchido antes de executar"></div>
+            <div class="shot-caption">03 — preenchido</div>
+          </div>
+          <div class="shot-frame">
+            <div class="scroll"><img src="screenshots/04-try-it-out-response.png" alt="Resposta 200 exibida no Swagger UI"></div>
+            <div class="shot-caption">04 — resposta 200</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span><span class="fk">Stack de apoio:</span> Postgres 16, InfluxDB 2.7, Mosquitto — subidos via docker compose.</span>
+    <span><span class="fk">Correção aplicada:</span> checksum da migration V10 divergente do banco local foi reparado antes da subida (autorizado por você).</span>
+  </footer>
+
+  <a class="back" href="parte2-cobertura-completa.html" style="font-size:13px;color:var(--accent-strong);text-decoration:none;font-weight:600;">Parte 2: cadastros, regras de negócio e telemetria ao vivo →</a>
+
+</div>
+</body>
+</html>

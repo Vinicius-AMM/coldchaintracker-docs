@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentação Técnica — ColdChainTracker</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root{
+    --bg:#f3f7fb; --surface:#ffffff; --surface-alt:#eaf2fa; --border:#d6e2ee;
+    --text:#14233d; --text-dim:#56698a;
+    --accent:#1ca7e0; --accent-strong:#0b4f8f;
+    --success:#1f9d55; --warning:#c98a12; --danger:#c0392b;
+    --code-bg:#0f1e30; --code-text:#e9f1fb;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#081420; --surface:#0f1e30; --surface-alt:#132840; --border:#20374f;
+      --text:#e9f1fb; --text-dim:#94a9c9;
+      --accent:#5cc8f5; --accent-strong:#8fdcff;
+      --success:#3ecb7a; --warning:#e0b74a; --danger:#e36b5b;
+      --code-bg:#050d16; --code-text:#dbeafe;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Manrope',system-ui,sans-serif; line-height:1.6;
+  }
+
+  .layout{ display:grid; grid-template-columns:260px 1fr; max-width:1240px; margin:0 auto; }
+
+  nav.toc{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:32px 18px; border-right:1px solid var(--border);
+  }
+  nav.toc .brand{ display:flex; align-items:center; gap:10px; margin-bottom:24px; }
+  nav.toc .brand .badge{
+    width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-strong));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0;
+  }
+  nav.toc .brand strong{ font-family:'Outfit',system-ui,sans-serif; font-size:14.5px; }
+  nav.toc ol{ list-style:none; margin:0; padding:0; counter-reset:sec; }
+  nav.toc li{ counter-increment:sec; margin-bottom:2px; }
+  nav.toc a{
+    display:block; padding:7px 10px; border-radius:8px; color:var(--text-dim); text-decoration:none;
+    font-size:13px; font-weight:600;
+  }
+  nav.toc a::before{ content:"7.10." counter(sec) " "; font-family:'IBM Plex Mono',monospace; color:var(--accent-strong); font-weight:500; }
+  nav.toc a:hover{ background:var(--surface-alt); color:var(--text); }
+
+  main{ padding:48px 56px 120px; min-width:0; }
+
+  header.hero{ margin-bottom:56px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong);
+    text-transform:uppercase; letter-spacing:0.1em; margin-bottom:10px;
+  }
+  h1{ font-family:'Outfit',system-ui,sans-serif; font-size:34px; margin:0 0 12px; letter-spacing:-0.01em; }
+  header.hero p{ color:var(--text-dim); font-size:15.5px; max-width:720px; margin:0; }
+
+  section.block{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:32px 36px; margin-bottom:28px; scroll-margin-top:24px;
+  }
+  section.block h2{
+    font-family:'Outfit',system-ui,sans-serif; font-size:21px; margin:0 0 6px;
+    display:flex; align-items:center; gap:10px;
+  }
+  section.block h2 .num{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:#fff; background:var(--accent-strong);
+    border-radius:6px; padding:2px 8px;
+  }
+  section.block > p.lead{ color:var(--text-dim); font-size:14px; margin:0 0 20px; }
+  section.block h3{ font-family:'Outfit',system-ui,sans-serif; font-size:15.5px; margin:24px 0 10px; color:var(--accent-strong); }
+  section.block h3:first-of-type{ margin-top:8px; }
+
+  p{ margin:0 0 12px; font-size:14.5px; }
+  ul, ol.list{ margin:0 0 14px; padding-left:22px; font-size:14.5px; }
+  li{ margin-bottom:6px; }
+  strong{ color:var(--text); }
+  code{
+    font-family:'IBM Plex Mono',monospace; background:var(--surface-alt); border:1px solid var(--border);
+    border-radius:5px; padding:1px 6px; font-size:12.5px; color:var(--accent-strong);
+  }
+  pre{
+    background:var(--code-bg); color:var(--code-text); border-radius:10px; padding:16px 18px;
+    overflow-x:auto; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.55; margin:0 0 16px;
+  }
+  pre code{ background:none; border:none; padding:0; color:inherit; }
+
+  table{ width:100%; border-collapse:collapse; margin:0 0 16px; font-size:13.5px; }
+  th, td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th{ font-family:'Outfit',system-ui,sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-dim); font-weight:700; }
+  tr:last-child td{ border-bottom:none; }
+
+  .pill{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px;
+    border-radius:999px; border:1px solid var(--border); color:var(--text-dim); background:var(--surface-alt);
+  }
+  .pill.ok{ color:var(--success); border-color:var(--success); }
+  .pill.warn{ color:var(--warning); border-color:var(--warning); }
+  .pill.todo{ color:var(--text-dim); }
+
+  .diagram-card{
+    background:var(--surface-alt); border:1px solid var(--border); border-radius:12px;
+    padding:20px; margin-bottom:20px;
+  }
+  .diagram-card .cap{ font-size:12.5px; color:var(--text-dim); margin-top:12px; }
+  .mermaid{ display:flex; justify-content:center; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:900px){ .grid2{ grid-template-columns:1fr; } .layout{ grid-template-columns:1fr; } nav.toc{ position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); } main{ padding:32px 20px 80px; } }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:12.5px; padding:32px 0; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <div class="brand">
+      <div class="badge">❄</div>
+      <strong>ColdChainTracker</strong>
+    </div>
+    <ol>
+      <li><a href="#arquitetura">Arquitetura</a></li>
+      <li><a href="#tecnologias">Tecnologias</a></li>
+      <li><a href="#prototipos">Protótipos</a></li>
+      <li><a href="#diagramas">Diagramas</a></li>
+      <li><a href="#fluxo">Fluxo</a></li>
+      <li><a href="#requisitos">Requisitos</a></li>
+      <li><a href="#decisoes">Decisões técnicas</a></li>
+      <li><a href="#testes">Testes realizados</a></li>
+      <li><a href="#evidencias">Evidências do desenvolvimento</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Seção 7.10 · Documentação técnica</div>
+      <h1>Do hardware ao software</h1>
+      <p>Documentação técnica do ColdChainTracker, sistema B2B de rastreabilidade de cadeia fria: sensor ESP32 + DS18B20, ingestão via MQTT, backend Spring Boot com persistência híbrida (PostgreSQL + InfluxDB), telemetria em tempo real via SSE e painel Angular.</p>
+    </header>
+
+    <!-- 7.10.1 Arquitetura -->
+    <section class="block" id="arquitetura">
+      <h2><span class="num">1</span> Arquitetura</h2>
+      <p class="lead">Arquitetura de ponta a ponta, organizada em cinco camadas desacopladas.</p>
+
+      <p>O ColdChainTracker conecta o sensor físico ao painel web em cinco camadas:</p>
+      <ol class="list">
+        <li><strong>Hardware</strong> — ESP32 DevKitV1 + sensor DS18B20 (protocolo OneWire), lendo a temperatura no compartimento de carga e publicando via WiFi.</li>
+        <li><strong>Mensageria</strong> — broker MQTT (Eclipse Mosquitto), desacoplando o sensor do backend.</li>
+        <li><strong>Backend</strong> — Spring Boot: ingestão assíncrona de telemetria, regras de negócio (RN-05, RN-08…), persistência híbrida (PostgreSQL para dados de negócio, InfluxDB para séries temporais), exposição via REST + SSE, geração de certificado em PDF.</li>
+        <li><strong>Contrato de API</strong> — OpenAPI (<code>/v3/api-docs</code>), fonte única de verdade dos tipos, usada para gerar automaticamente o cliente do frontend.</li>
+        <li><strong>Frontend</strong> — Angular SPA (standalone components + signals), consumindo REST para dados históricos e SSE para telemetria ao vivo.</li>
+      </ol>
+      <p>O diagrama de fluxo de dados completo está na seção <a href="#diagramas">7.10.4 Diagramas</a>.</p>
+    </section>
+
+    <!-- 7.10.2 Tecnologias -->
+    <section class="block" id="tecnologias">
+      <h2><span class="num">2</span> Tecnologias</h2>
+      <p class="lead">Stack completo, camada por camada, com a justificativa de cada escolha.</p>
+
+      <h3>Hardware &amp; firmware</h3>
+      <table>
+        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><td>ESP32 DevKitV1</td><td>Microcontrolador com WiFi integrado, baixo custo, embarcado no veículo</td></tr>
+        <tr><td>DS18B20 (OneWire)</td><td>Sensor de temperatura digital, resolução 12 bits</td></tr>
+        <tr><td>Arduino IDE / C++</td><td>Toolchain do firmware</td></tr>
+        <tr><td>OneWire, DallasTemperature, PubSubClient, ArduinoJson</td><td>Leitura do sensor, cliente MQTT e serialização JSON</td></tr>
+        <tr><td>SNTP (<code>pool.ntp.org</code>)</td><td>Sincronização de relógio antes de publicar (timestamp obrigatório)</td></tr>
+      </table>
+
+      <h3>Mensageria &amp; simulação</h3>
+      <table>
+        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><td>Eclipse Mosquitto (MQTT)</td><td>Broker de telemetria IoT, desacopla sensor de backend</td></tr>
+        <tr><td>Simulador Python</td><td>Replica o payload exato do firmware para testar sem hardware físico</td></tr>
+      </table>
+
+      <h3>Backend</h3>
+      <table>
+        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><td>Java 21 + Spring Boot</td><td>REST/SSE, injeção de dependência</td></tr>
+        <tr><td>Spring Integration + Eclipse Paho</td><td>Ingestão MQTT dentro do ecossistema Spring</td></tr>
+        <tr><td>Spring Data JPA + Flyway</td><td>ORM e versionamento de schema relacional</td></tr>
+        <tr><td>PostgreSQL 16</td><td>Dados de negócio (empresas, viagens, usuários, veículos, lotes, alertas, relatórios)</td></tr>
+        <tr><td>InfluxDB 2.7</td><td>Séries temporais de leituras de sensor</td></tr>
+        <tr><td>springdoc-openapi</td><td>Contrato OpenAPI/Swagger gerado a partir do código</td></tr>
+        <tr><td>Flying Saucer (openpdf)</td><td>Geração do certificado de conformidade em PDF</td></tr>
+        <tr><td>Lombok</td><td>Redução de boilerplate</td></tr>
+        <tr><td>JUnit + Testcontainers (Postgres, InfluxDB, HiveMQ)</td><td>Testes de integração contra infraestrutura real</td></tr>
+      </table>
+
+      <h3>Frontend</h3>
+      <table>
+        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><td>Angular 22 (standalone components)</td><td>SPA sem NgModule</td></tr>
+        <tr><td>TypeScript estrito</td><td>Segurança de tipos</td></tr>
+        <tr><td>Signals (Angular)</td><td>Estado local/reativo, sem state manager externo</td></tr>
+        <tr><td>RxJS</td><td>Streams assíncronos (HTTP, SSE)</td></tr>
+        <tr><td>ng-openapi-gen</td><td>Cliente HTTP e DTOs gerados a partir do OpenAPI do backend</td></tr>
+        <tr><td>SCSS + design tokens próprios</td><td>Design system próprio, sem framework de UI de terceiros</td></tr>
+      </table>
+
+      <h3>Infraestrutura</h3>
+      <table>
+        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><td>Docker Compose</td><td>Orquestração local de Postgres, InfluxDB e Mosquitto</td></tr>
+      </table>
+    </section>
+
+    <!-- 7.10.3 Protótipos -->
+    <section class="block" id="prototipos">
+      <h2><span class="num">3</span> Protótipos</h2>
+      <p class="lead">Do firmware funcional ao painel web integrado à API real.</p>
+
+      <h3>Firmware (hardware real)</h3>
+      <p>Sketch <code>ESP32_Arduino.ino</code> funcional — conecta ao WiFi, sincroniza hora via SNTP, lê o DS18B20 a cada 2 segundos e publica no broker MQTT. LED onboard (GPIO2) pisca a cada leitura como indicador visual de atividade.</p>
+
+      <h3>Simulador de sensor (sem hardware)</h3>
+      <p>Script Python que replica exatamente o contrato de payload do firmware real, permitindo testar o pipeline completo (MQTT → backend → frontend) sem depender de hardware físico. As leituras se movem gradativamente (um pequeno passo por vez, não um valor aleatório independente a cada tick), e o cenário é escolhido via <code>--scenario</code>: <code>compliant</code> permanece dentro da faixa segura o trajeto inteiro (relatório aprovado), <code>non-compliant</code> sobe gradualmente até romper o limite, sustenta a excursão e depois recupera (relatório reprovado) — usado pra validar a geração e normalização de alertas.</p>
+
+      <h3>Mockups de telas (aprovados)</h3>
+      <p>16 mockups estáticos HTML/CSS cobrindo Login, Registro, Dashboard, Viagens (lista/detalhe), Frota/Veículo/Motorista, Lotes, Alertas (lista/detalhe), Relatórios (lista/detalhe) e Administração (Empresas/Usuários/Limites) — usados como fonte da verdade de layout, espaçamento e cores para a implementação.</p>
+
+      <h3>Protótipo funcional (SPA Angular)</h3>
+      <p>
+        <span class="pill ok">pronto</span> Login/Registro, Shell (sidebar + header dinâmico por papel/empresa)&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Dashboard com KPIs&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Viagens: lista + detalhe com telemetria SSE ao vivo&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Frota: lista, veículo, motorista
+      </p>
+      <p>
+        <span class="pill ok">pronto</span> Lotes de Carga: lista&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Alertas: lista + detalhe&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Relatórios: lista + detalhe&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Administração: Empresas, Usuários, Limites (protegido por <code>adminRoleGuard</code>)
+      </p>
+      <p>
+        <span class="pill todo">pendente</span> Detalhe de Lote (<code>/lotes/:id</code>) — único item ainda sem mockup aprovado, aguardando design antes de implementar
+      </p>
+      <p class="cap" style="color:var(--text-dim); font-size:13px;">15 das 16 telas do mockup aprovado já estão implementadas e integradas à API real; só falta o drill-down de Detalhe de Lote.</p>
+    </section>
+
+    <!-- 7.10.4 Diagramas -->
+    <section class="block" id="diagramas">
+      <h2><span class="num">4</span> Diagramas</h2>
+      <p class="lead">Diagrama de arquitetura (fluxo de dados) e modelo lógico do banco de dados.</p>
+
+      <div class="diagram-card">
+        <div class="mermaid">
+flowchart TD
+    subgraph Origem ["Origem dos Dados"]
+        ESP32["ESP32 + DS18B20 (Hardware)"]
+        Simulador["Simulador Python (sem HW)"]
+    end
+
+    Broker["Mosquitto (Broker MQTT)"]
+
+    subgraph Backend ["Backend Spring Boot"]
+        Ingestion["TelemetryIngestionService"]
+        Postgres[(PostgreSQL - Negócio)]
+        Influx[(InfluxDB - Séries Temporais)]
+        API["REST API + SSE (/v3/api-docs)"]
+
+        Ingestion --> Postgres
+        Ingestion --> Influx
+        Ingestion --> API
+    end
+
+    Frontend["Frontend Angular (SPA)"]
+
+    ESP32 -- "MQTT publish" --> Broker
+    Simulador -. "simula" .-> ESP32
+    Broker -- "Spring Integration (subscribe)" --> Ingestion
+    API -- "HTTP + SSE" --> Frontend
+        </div>
+        <p class="cap">Diagrama de arquitetura — do sensor (real ou simulado) até o painel Angular, passando pelo broker MQTT e pela ingestão do backend.</p>
+      </div>
+
+      <div class="diagram-card">
+        <div class="mermaid">
+erDiagram
+
+    COMPANIES {
+        CHAR(36) id PK
+        VARCHAR(150) corporate_name
+        VARCHAR(100) trade_name
+        VARCHAR(18) cnpj UK
+        VARCHAR(20) company_type
+        VARCHAR(20) phone
+        VARCHAR(100) email
+        VARCHAR(100) city
+        VARCHAR(50) state
+        DATETIME created_at
+    }
+
+    APP_USERS {
+        CHAR(36) id PK
+        VARCHAR(100) name
+        VARCHAR(100) email UK
+        VARCHAR(255) password_hash
+        VARCHAR(20) role
+        BOOLEAN active
+        CHAR(36) company_id FK
+        DATETIME created_at
+    }
+
+    VEHICLES {
+        CHAR(36) id PK
+        VARCHAR(10) license_plate UK
+        VARCHAR(100) model
+        DECIMAL load_capacity_kg
+        VARCHAR(50) device_id UK
+        BOOLEAN active
+        CHAR(36) owner_company_id FK
+        DATETIME created_at
+    }
+
+    DRIVERS {
+        CHAR(36) id PK
+        VARCHAR(100) name
+        VARCHAR(14) cpf UK
+        VARCHAR(20) cnh
+        VARCHAR(20) phone
+        CHAR(36) carrier_company_id FK
+        DATETIME created_at
+    }
+
+    MEAT_BATCHES {
+        CHAR(36) id PK
+        VARCHAR(50) batch_code UK
+        VARCHAR(10) meat_type
+        DECIMAL weight_kg
+        CHAR(36) origin_company_id FK
+        DATETIME created_at
+    }
+
+    TRIPS {
+        CHAR(36) id PK
+        VARCHAR(50) route_code UK
+        CHAR(36) vehicle_id FK
+        CHAR(36) driver_id FK
+        CHAR(36) origin_company_id FK
+        CHAR(36) destination_company_id FK
+        VARCHAR(20) status
+        DATETIME started_at
+        DATETIME finished_at
+        DATETIME created_at
+    }
+
+    TRIP_MEAT_BATCHES {
+        CHAR(36) trip_id PK, FK
+        CHAR(36) meat_batch_id PK, FK
+    }
+
+    REPORT_NUMBER_COUNTERS {
+        VARCHAR(30) report_type PK
+        INT year PK
+        BIGINT last_seq
+    }
+
+    REPORTS {
+        CHAR(36) id PK
+        VARCHAR(30) report_number UK
+        VARCHAR(30) report_type
+        CHAR(36) trip_id FK
+        VARCHAR(10) meat_type
+        DECIMAL applied_min_temperature
+        DECIMAL applied_max_temperature
+        VARCHAR(5) applied_unit
+        DATETIME period_start
+        DATETIME period_end
+        VARCHAR(20) status
+        VARCHAR(200) location_label
+        VARCHAR(200) sector_label
+        VARCHAR(2000) general_notes
+        VARCHAR(1000) conclusion_text
+        CHAR(36) generated_by_user_id FK
+        CHAR(36) technical_responsible_user_id FK
+        INT version
+        INT reading_count
+        INT compliant_reading_count
+        INT non_compliant_reading_count
+        DECIMAL min_temperature
+        DECIMAL max_temperature
+        DECIMAL avg_temperature
+        DECIMAL median_temperature
+        DECIMAL stddev_temperature
+        DECIMAL max_temperature_exceeded
+        DECIMAL min_temperature_exceeded
+        BIGINT total_excursion_minutes
+        BIGINT longest_excursion_minutes
+        INT excursion_event_count
+        DATETIME generated_at
+        DATETIME created_at
+    }
+
+    THERMAL_EXCURSIONS {
+        CHAR(36) id PK
+        CHAR(36) trip_id FK
+        CHAR(36) report_id FK
+        DATETIME start_time
+        DATETIME end_time
+        BIGINT duration_minutes
+        DECIMAL peak_temperature
+        DECIMAL avg_deviation_temperature
+        VARCHAR(20) alert_level
+        VARCHAR(255) description
+        DATETIME created_at
+    }
+
+    COMPANIES ||--o{ APP_USERS : "possui"
+    COMPANIES ||--o{ VEHICLES : "possui"
+    COMPANIES ||--o{ DRIVERS : "possui"
+    COMPANIES ||--o{ MEAT_BATCHES : "origina"
+    COMPANIES ||--o{ TRIPS : "origem"
+    COMPANIES ||--o{ TRIPS : "destino"
+    VEHICLES ||--o{ TRIPS : "utilizado_em"
+    DRIVERS ||--o{ TRIPS : "conduz"
+    TRIPS ||--o{ TRIP_MEAT_BATCHES : "possui"
+    MEAT_BATCHES ||--o{ TRIP_MEAT_BATCHES : "transportado_em"
+    TRIPS ||--o{ REPORTS : "gera"
+    APP_USERS ||--o{ REPORTS : "gera"
+    APP_USERS ||--o{ REPORTS : "responsavel_tecnico"
+    TRIPS ||--o{ THERMAL_EXCURSIONS : "possui"
+    REPORTS ||--o{ THERMAL_EXCURSIONS : "registra"
+        </div>
+        <p class="cap">Modelo lógico do banco de dados relacional (PostgreSQL) — empresas, usuários, frota, lotes, viagens, relatórios de conformidade e excursões térmicas.</p>
+      </div>
+    </section>
+
+    <!-- 7.10.5 Fluxo -->
+    <section class="block" id="fluxo">
+      <h2><span class="num">5</span> Fluxo</h2>
+      <p class="lead">Do sensor ao certificado de conformidade, ponta a ponta.</p>
+      <ol class="list">
+        <li>O sensor DS18B20 mede a temperatura no compartimento de carga do veículo.</li>
+        <li>O ESP32 lê o valor a cada 2 s, sincroniza o timestamp via SNTP e publica em <code>coldchain/telemetry/&lt;device_id&gt;</code> no broker Mosquitto:
+          <pre><code>{ "device_id": "esp32-001", "temperature": 2.3, "timestamp": "2026-01-01T12:00:00Z" }</code></pre>
+        </li>
+        <li>O sensor <strong>não sabe</strong> qual viagem está em andamento — o <code>trip_id</code> nunca é enviado. O backend resolve a viagem ativa a partir do <code>device_id</code> (associado ao veículo), buscando a viagem em status <code>IN_PROGRESS</code>; se não houver, a leitura é descartada silenciosamente.</li>
+        <li>O backend grava a leitura no InfluxDB (série temporal) e avalia a regra de conformidade conforme o tipo de carga do lote associado à viagem.</li>
+        <li>Se a temperatura sair da faixa permitida, um alerta é criado/atualizado (<code>WARNING</code>/<code>CRITICAL</code>); ao normalizar, o alerta passa a <code>NORMALIZED</code> (regra RN-05 controla quem enxerga cada alerta).</li>
+        <li>A leitura é propagada em tempo real ao frontend via <strong>SSE</strong>, atualizando o gráfico da tela de Detalhe de Viagem sem polling.</li>
+        <li>Ao concluir a viagem (<code>COMPLETED</code>), o backend agrega o histórico de leituras e gera um <strong>certificado de conformidade em PDF</strong>, disponível na tela de Relatórios.</li>
+      </ol>
+    </section>
+
+    <!-- 7.10.6 Requisitos -->
+    <section class="block" id="requisitos">
+      <h2><span class="num">6</span> Requisitos</h2>
+      <p class="lead">Funcionais (implementados e planejados) e não funcionais.</p>
+
+      <h3>Funcionais — implementados</h3>
+      <table>
+        <tr><th>ID</th><th>Descrição</th></tr>
+        <tr><td>RF01</td><td>Cadastro e identificação de empresas dos três tipos (SUPPLIER, CARRIER, RECIPIENT) e usuários com papéis distintos</td></tr>
+        <tr><td>RF02</td><td>Cadastro de veículos (com <code>device_id</code> do sensor) e motoristas por transportadora</td></tr>
+        <tr><td>RF03</td><td>Criação de viagem associando fornecedor, transportadora, destinatário, veículo, motorista e lote de carga</td></tr>
+        <tr><td>RF04</td><td>Ingestão de leituras de temperatura via MQTT, associadas automaticamente à viagem em andamento</td></tr>
+        <tr><td>RF05</td><td>Exibição de telemetria em tempo real (SSE) na tela de detalhe da viagem</td></tr>
+        <tr><td>RF06</td><td>Geração automática de alertas quando a temperatura sai da faixa de conformidade</td></tr>
+        <tr><td>RF07</td><td>Geração de certificado de conformidade em PDF ao final da viagem</td></tr>
+        <tr><td>RF08 (RN-05)</td><td>Visibilidade de alertas filtrada por papel/tipo de empresa do usuário</td></tr>
+        <tr><td>RF09 (RN-08)</td><td>Regras de transição de status de viagem (ex.: impedir conflitos de estado)</td></tr>
+        <tr><td>RF10</td><td>Listagem de Lotes de Carga associados às viagens da empresa</td></tr>
+        <tr><td>RF11</td><td>Listagem e detalhe de Alertas, com filtro por viagem e nível de severidade</td></tr>
+        <tr><td>RF12</td><td>Listagem e detalhe de Relatórios de conformidade, com preview do certificado</td></tr>
+        <tr><td>RF13</td><td>Telas de Administração (Empresas, Usuários, Limites de conformidade), restritas a <code>ROLE_ADMIN</code>/<code>ROLE_COMPANY_ADMIN</code></td></tr>
+      </table>
+
+      <h3>Funcionais — planejados</h3>
+      <p>Detalhe de Lote (<code>/lotes/:id</code>) — único item ainda pendente; falta desenhar o mockup de drill-down antes de implementar a rota.</p>
+
+      <h3>Não funcionais</h3>
+      <table>
+        <tr><th>ID</th><th>Descrição</th></tr>
+        <tr><td>RNF01</td><td>Telemetria deve chegar ao frontend em tempo real, sem polling (SSE)</td></tr>
+        <tr><td>RNF02</td><td>Persistência de séries temporais de alto volume separada da persistência relacional de negócio</td></tr>
+        <tr><td>RNF03</td><td>Contrato de API único (OpenAPI) como fonte da verdade, evitando divergência entre frontend e backend</td></tr>
+        <tr><td>RNF04</td><td>Todo texto da interface em português (pt-BR); nomenclatura de domínio fixa e documentada</td></tr>
+        <tr><td>RNF05</td><td>Sensor físico desacoplado da lógica de negócio (não conhece viagem, apenas <code>device_id</code>)</td></tr>
+        <tr><td>RNF06</td><td>Controle de acesso por papel nas rotas administrativas: usuário sem <code>ROLE_ADMIN</code>/<code>ROLE_COMPANY_ADMIN</code> é redirecionado ao Dashboard ao tentar acessar <code>/admin/*</code></td></tr>
+      </table>
+    </section>
+
+    <!-- 7.10.7 Decisões técnicas -->
+    <section class="block" id="decisoes">
+      <h2><span class="num">7</span> Decisões técnicas</h2>
+      <p class="lead">Escolhas de arquitetura e a razão por trás de cada uma.</p>
+      <ul>
+        <li><strong>Persistência híbrida (PostgreSQL + InfluxDB):</strong> dados de negócio em banco relacional; leituras de sensor de alto volume em banco de séries temporais — separação motivada por padrão de acesso e volume muito diferentes.</li>
+        <li><strong>MQTT como camada de ingestão IoT:</strong> desacopla o firmware do backend; o sensor publica de forma "fire-and-forget", sem conhecer a API REST nem autenticação.</li>
+        <li><strong><code>trip_id</code> nunca enviado pelo sensor:</strong> o hardware (e o simulador, que replica o mesmo contrato) só sabe seu próprio <code>device_id</code>; a associação com a viagem ativa é responsabilidade exclusiva do backend, evitando acoplamento entre hardware e sistema de viagens.</li>
+        <li><strong>SSE em vez de WebSocket/polling:</strong> a telemetria é um fluxo unidirecional (servidor → cliente); SSE é mais simples de operar que WebSocket para esse caso de uso e evita o custo de polling.</li>
+        <li><strong>Autenticação stand-in via <code>X-User-Id</code>:</strong> a API ainda não tem login real (senha/JWT). Um interceptor injeta esse header em toda chamada do frontend; papel e tipo de empresa são resolvidos uma vez e cacheados em signal — decisão documentada como transitória.</li>
+        <li><strong>Cliente HTTP do frontend gerado, nunca escrito à mão:</strong> elimina divergência de contrato; qualquer mudança de DTO no backend obriga regeneração via <code>ng-openapi-gen</code>.</li>
+        <li><strong>Angular standalone + Signals, sem NgRx:</strong> a complexidade da aplicação não justifica um state manager externo.</li>
+        <li><strong>Simulador Python replicando o payload exato do firmware:</strong> permite testar o pipeline completo, incluindo excursões térmicas, sem depender de hardware físico disponível.</li>
+        <li><strong>Testcontainers em vez de mocks para infraestrutura:</strong> os testes de integração sobem instâncias reais de Postgres, InfluxDB e um broker MQTT (HiveMQ), refletindo o comportamento de produção.</li>
+      </ul>
+    </section>
+
+    <!-- 7.10.8 Testes realizados -->
+    <section class="block" id="testes">
+      <h2><span class="num">8</span> Testes realizados</h2>
+      <p class="lead">Do firmware em campo aos testes de integração do backend.</p>
+      <ul>
+        <li><strong>Testes de integração do backend</strong> (JUnit + Testcontainers): pipeline completo MQTT → SSE → InfluxDB → geração de relatório de conformidade, além de Companies, Vehicles, Drivers, Meat Batches, Users e Compliance Thresholds.</li>
+        <li><strong>Regras de negócio validadas em teste:</strong> RN-08 (transições de status de viagem, incluindo conflito) e RN-05 (visibilidade de alertas por papel/empresa).</li>
+        <li><strong>Testes manuais via Swagger UI:</strong> módulo de Viagens (Trips) ponta a ponta, com captura de request/response reais.</li>
+        <li><strong>Testes de geração de certificado:</strong> geração e download do PDF de conformidade para um lote real (<code>LC-2026-000003</code>).</li>
+        <li><strong>Testes unitários do frontend:</strong> spec por componente Angular (Login, Registro, Shell, Header, Sidebar, Dashboard, ViagensLista, ViagemDetalhe, Frota, DataTable, Button, ComingSoon).</li>
+        <li><strong>Teste de campo do firmware:</strong> validação manual do ESP32 + DS18B20 publicando leituras reais via WiFi/MQTT, incluindo verificação do LED indicador e do log serial de erro para sensor desconectado.</li>
+        <li><strong>Simulação de cenários de temperatura:</strong> uso do simulador Python (<code>--scenario compliant</code> / <code>--scenario non-compliant</code>) para validar tanto relatórios aprovados quanto a geração e normalização de alertas em uma excursão térmica sustentada, sem hardware físico.</li>
+      </ul>
+    </section>
+
+    <!-- 7.10.9 Evidências do desenvolvimento -->
+    <section class="block" id="evidencias">
+      <h2><span class="num">9</span> Evidências do desenvolvimento</h2>
+      <p class="lead">Artefatos gerados ao longo do desenvolvimento, disponíveis no repositório.</p>
+      <ul>
+        <li><strong>Relatórios de teste de API</strong> (<code>docs/api-test-reports/</code>): Swagger UI + módulo Trips; cobertura completa da API (Companies, Vehicles, Drivers, Meat Batches, Users, Compliance Thresholds, RN-08, pipeline MQTT → SSE → InfluxDB → Relatório); geração do certificado <code>LC-2026-000003</code>.</li>
+        <li><strong>Capturas de tela</strong> de cada etapa testada (Swagger UI, payload preenchido, resposta da API, conflito RN-08, geração e resposta do PDF).</li>
+        <li><strong>Histórico de commits</strong> organizado por feature/branch: auth → shared components → dashboard → viagens (SSE) → frota, cada um com commits separados de template, estilos, componente e teste.</li>
+        <li><strong>Código-fonte do firmware</strong> (<code>ESP32_Arduino.ino</code>), com comentários documentando o contrato de payload esperado pelo backend e a fiação do sensor.</li>
+        <li><strong>Simulador Python</strong> (<code>simulator.py</code> + <code>README.md</code>), documentando o contrato de payload MQTT e os argumentos usados para gerar cenários de teste.</li>
+      </ul>
+    </section>
+
+    <footer>ColdChainTracker — Documentação técnica gerada a partir do estado atual do repositório.</footer>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#ffffff',
+      primaryColor: '#eaf2fa',
+      primaryBorderColor: '#1ca7e0',
+      primaryTextColor: '#14233d',
+      lineColor: '#0b4f8f',
+      secondaryColor: '#eaf2fa',
+      tertiaryColor: '#f3f7fb',
+      fontFamily: "'Manrope', system-ui, sans-serif",
+      fontSize: '13px'
+    },
+    er: { fontSize: 12 },
+    flowchart: { curve: 'basis' }
+  });
+</script>
+</body>
+</html>

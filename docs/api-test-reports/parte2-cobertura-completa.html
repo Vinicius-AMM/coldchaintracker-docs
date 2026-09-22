@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobertura Completa da API</title>
+<meta name="description" content="Segunda rodada de testes reais da ColdChainTracker API via Playwright: cadastros, regras de negócio e o pipeline completo MQTT → SSE → InfluxDB → Relatório de conformidade.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f3f7fb;
+    --surface:#ffffff;
+    --surface-2:#eaf2f9;
+    --border:#d6e2ee;
+    --text:#14233d;
+    --text-dim:#56698a;
+    --accent:#1ca7e0;
+    --accent-strong:#0b4f8f;
+    --accent-ink:#ffffff;
+    --success:#1a8f4c;
+    --success-bg:#e5f6ec;
+    --success-border:#b6e3c7;
+    --danger:#b93a2c;
+    --danger-bg:#fbebe8;
+    --danger-border:#f0c4bb;
+    --line:#c3d5e6;
+    --code-bg:#0e1c2e;
+    --code-text:#d9e6f2;
+    --code-key:#5fc1ee;
+    --code-str:#f0b86e;
+    --code-num:#7fb3f5;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --bg:#081420;
+      --surface:#0f1e30;
+      --surface-2:#132840;
+      --border:#20374f;
+      --text:#e9f1fb;
+      --text-dim:#94a9c9;
+      --accent:#5cc8f5;
+      --accent-strong:#8fdcff;
+      --accent-ink:#04223f;
+      --success:#3ecb7c;
+      --success-bg:#0f2a1d;
+      --success-border:#1f4a34;
+      --danger:#ff8478;
+      --danger-bg:#321815;
+      --danger-border:#5a2a24;
+      --line:#25405c;
+      --code-bg:#081320;
+      --code-text:#d9e6f2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#081420;
+    --surface:#0f1e30;
+    --surface-2:#132840;
+    --border:#20374f;
+    --text:#e9f1fb;
+    --text-dim:#94a9c9;
+    --accent:#5cc8f5;
+    --accent-strong:#8fdcff;
+    --accent-ink:#04223f;
+    --success:#3ecb7c;
+    --success-bg:#0f2a1d;
+    --success-border:#1f4a34;
+    --danger:#ff8478;
+    --danger-bg:#321815;
+    --danger-border:#5a2a24;
+    --line:#25405c;
+    --code-bg:#081320;
+    --code-text:#d9e6f2;
+  }
+
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'Manrope',system-ui,sans-serif; padding-inline:16px; padding-block:32px; }
+  .page{ max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:40px; }
+  h1,h2,h3{ font-family:'Outfit',system-ui,sans-serif; letter-spacing:-0.01em; text-wrap:balance; margin:0; }
+
+  header.hero{ display:flex; flex-direction:column; gap:14px; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--accent-strong); text-transform:uppercase; letter-spacing:0.09em; display:flex; align-items:center; gap:8px; }
+  .eyebrow .dot{ width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px var(--success-bg); }
+  h1{ font-size:clamp(24px,4.2vw,32px); font-weight:700; }
+  .sub{ color:var(--text-dim); font-size:15px; max-width:66ch; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .chip{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 10px; display:flex; align-items:center; gap:6px; }
+  .chip b{ color:var(--text); font-weight:600; }
+
+  .summary{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .summary .cell{ background:var(--surface); padding:16px 18px; display:flex; flex-direction:column; gap:4px; }
+  .summary .cell .num{ font-family:'Outfit',system-ui,sans-serif; font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .summary .cell .label{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .summary .cell.ok .num{ color:var(--success); }
+  .summary .cell.acc .num{ color:var(--accent-strong); }
+
+  section{ display:flex; flex-direction:column; gap:16px; }
+  .section-head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .section-head h2{ font-size:21px; font-weight:700; }
+  .section-head .count{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); background:var(--surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:20px; }
+  .section-desc{ color:var(--text-dim); font-size:14px; line-height:1.55; max-width:70ch; }
+
+  /* resource table */
+  .res-table{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface); }
+  .res-row{ display:grid; grid-template-columns:1.1fr 2fr auto 1.4fr; gap:14px; padding:12px 16px; align-items:center; border-top:1px solid var(--border); }
+  .res-row:first-child{ border-top:none; background:var(--surface-2); }
+  .res-row.head{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); font-weight:600; }
+  .res-row .name{ font-weight:600; font-size:14px; }
+  .res-row .fields{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); }
+  .res-row .fields b{ color:var(--text); font-weight:600; }
+  .res-row .rule{ font-size:12.5px; color:var(--text-dim); }
+  @media (max-width:640px){ .res-row{ grid-template-columns:1fr; gap:4px; } .res-row.head{ display:none; } }
+
+  .status-pill{ font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; border:1px solid; width:fit-content; }
+  .status-pill.s2{ background:var(--success-bg); color:var(--success); border-color:var(--success-border); }
+  .status-pill.s4{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border); }
+
+  /* edge case cards */
+  .edge-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+  .edge-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .edge-card .head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .edge-card h3{ font-size:15.5px; font-weight:600; }
+  .edge-card p{ color:var(--text-dim); font-size:13.5px; line-height:1.55; margin:0; }
+  .path-tag{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); background:var(--surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:6px; }
+
+  pre.code{ background:var(--code-bg); color:var(--code-text); border-radius:9px; padding:13px 15px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.55; overflow-x:auto; margin:0; }
+  .k{ color:var(--code-key); } .s{ color:var(--code-str); } .n{ color:var(--code-num); }
+
+  .shot-frame{ border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--surface-2); }
+  .shot-frame .scroll{ max-height:320px; overflow-y:auto; }
+  .shot-frame img{ display:block; width:100%; }
+  .shot-caption{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); padding:7px 10px; border-top:1px solid var(--border); background:var(--surface); }
+  .shots-pair{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:560px){ .shots-pair{ grid-template-columns:1fr; } }
+
+  /* golden path */
+  .golden{ border:1.5px solid var(--accent); border-radius:14px; padding:22px 24px; background:linear-gradient(180deg, var(--surface-2), var(--surface)); display:flex; flex-direction:column; gap:20px; }
+  .golden-steps{ display:flex; flex-wrap:wrap; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); }
+  .golden-steps span{ background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:4px 9px; }
+  .golden-steps span.now{ color:var(--accent-ink); background:var(--accent-strong); border-color:var(--accent-strong); font-weight:600; }
+  .golden-steps .arrow{ background:none; border:none; padding:4px 0; color:var(--text-dim); }
+
+  .live-feed{ background:var(--code-bg); border-radius:10px; padding:14px 16px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--code-text); display:flex; flex-direction:column; gap:6px; }
+  .live-feed .ev{ display:flex; gap:10px; align-items:baseline; }
+  .live-feed .ev .t{ color:var(--code-num); font-variant-numeric:tabular-nums; }
+  .live-feed .ev .temp{ color:#7fe0a8; font-weight:600; }
+  .live-feed .tag{ color:var(--code-key); }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .stat-grid .stat{ background:var(--surface); padding:14px 16px; display:flex; flex-direction:column; gap:2px; }
+  .stat-grid .stat .v{ font-family:'Outfit',system-ui,sans-serif; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat-grid .stat .l{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; }
+  .stat-grid .stat.good .v{ color:var(--success); }
+
+  .chart-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px 10px; }
+  .chart-wrap svg{ width:100%; height:auto; display:block; }
+  .chart-wrap .caption{ font-size:11.5px; color:var(--text-dim); margin-top:6px; }
+
+  .conclusion{ font-size:14px; line-height:1.6; background:var(--success-bg); border:1px solid var(--success-border); color:var(--success); border-radius:9px; padding:12px 14px; }
+  .conclusion b{ font-weight:700; }
+
+  footer{ border-top:1px solid var(--border); padding-top:18px; color:var(--text-dim); font-size:13px; display:flex; flex-wrap:wrap; gap:6px 16px; }
+  footer .fk{ color:var(--text); font-weight:600; }
+  a.back{ font-size:13px; color:var(--accent-strong); text-decoration:none; font-weight:600; }
+  a.back:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span> Execução ao vivo · Playwright + Chromium · Parte 2</div>
+    <h1>Cobertura completa — ColdChainTracker API</h1>
+    <p class="sub">Continuação do teste anterior (que cobriu o módulo Trips): agora todos os cadastros, as regras de negócio e o pipeline completo de telemetria — de um sensor MQTT real até um relatório de conformidade calculado a partir de dados reais no InfluxDB.</p>
+    <div class="meta-row">
+      <span class="chip">🌐 <b>localhost:8080</b></span>
+      <span class="chip">📡 Mosquitto + simulador Python real</span>
+      <span class="chip">🎭 Playwright <b>Chromium</b></span>
+      <span class="chip">🗓️ 2026-09-17</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="cell ok"><span class="num">33</span><span class="label">chamadas reais</span></div>
+    <div class="cell ok"><span class="num">9</span><span class="label">recursos criados</span></div>
+    <div class="cell acc"><span class="num">4</span><span class="label">regras de negócio validadas</span></div>
+    <div class="cell ok"><span class="num">1</span><span class="label">pipeline ponta a ponta</span></div>
+  </div>
+
+  <section>
+    <div class="section-head"><h2>Cadastros</h2><span class="count">6 recursos · list + create + get</span></div>
+    <p class="section-desc">Cada módulo segue o mesmo padrão testado: <code>GET</code> lista, <code>POST</code> cria (com o admin informando explicitamente a empresa dona do recurso) e <code>GET /{id}</code> confirma. Todos responderam <span style="color:var(--success);font-weight:600">201</span>/<span style="color:var(--success);font-weight:600">200</span> como esperado.</p>
+    <div class="res-table">
+      <div class="res-row head"><span>Recurso</span><span>Corpo enviado (POST)</span><span>Status</span><span>Regra testada</span></div>
+      <div class="res-row">
+        <span class="name">🏢 Empresa</span>
+        <span class="fields"><b>corporateName</b>, cnpj, <b>companyType</b>: SUPPLIER</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">Criação é ROLE_ADMIN-only</span>
+      </div>
+      <div class="res-row">
+        <span class="name">🚛 Veículo</span>
+        <span class="fields"><b>licensePlate</b>, <b>deviceId</b>, ownerCompanyId</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">deviceId único — liga ao sensor MQTT</span>
+      </div>
+      <div class="res-row">
+        <span class="name">🧑‍✈️ Motorista</span>
+        <span class="fields"><b>name</b>, cpf, cnh, carrierCompanyId</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">Vinculado à transportadora (RN-02)</span>
+      </div>
+      <div class="res-row">
+        <span class="name">📦 Lote (CHILLED)</span>
+        <span class="fields">batchCode, <b>meatType</b>: CHILLED, weightKg</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">Usado no golden path abaixo</span>
+      </div>
+      <div class="res-row">
+        <span class="name">📦 Lote (FROZEN)</span>
+        <span class="fields">batchCode, <b>meatType</b>: FROZEN, weightKg</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">Usado no conflito RN-08 abaixo</span>
+      </div>
+      <div class="res-row">
+        <span class="name">👤 Usuário</span>
+        <span class="fields">name, email, <b>role</b>: ROLE_COMPANY_ADMIN</span>
+        <span class="status-pill s2">201</span>
+        <span class="rule">Sem senha — auth é 100% por header</span>
+      </div>
+    </div>
+    <div class="shot-frame">
+      <div class="scroll"><img src="img/01-companies-tag-expanded.png" alt="Grupo Companies expandido no Swagger UI"></div>
+      <div class="shot-caption">Companies ▸ expandido no Swagger — os mesmos três verbos (list/create/get) se repetem em Vehicles, Drivers, Meat Batches e Users</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Compliance Thresholds</h2><span class="count">GET · sem autenticação</span></div>
+    <p class="section-desc">Limites sanitários fixos no código (base ANVISA), só leitura — não existe endpoint de criação/edição. É contra esses valores que o relatório de conformidade calcula o percentual de leituras dentro do limite.</p>
+    <div class="res-table">
+      <div class="res-row head"><span>Tipo de carga</span><span>Faixa segura</span><span>Status</span><span>Unidade</span></div>
+      <div class="res-row"><span class="name">❄️ CHILLED</span><span class="fields">0 a 4</span><span class="status-pill s2">200</span><span class="rule">°C</span></div>
+      <div class="res-row"><span class="name">🧊 FROZEN</span><span class="fields">-30 a -18</span><span class="status-pill s2">200</span><span class="rule">°C</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Alertas (excursões térmicas)</h2><span class="count">GET /api/alerts · adicionado depois — 21/09/2026</span></div>
+    <p class="section-desc">Endpoint criado numa rodada posterior a esta, quando o frontend Angular passou a precisar de uma lista de excursões térmicas independente de um relatório específico (Dashboard e a tela de Alertas). Reaproveita o mesmo cálculo de nível (WARNING/CRITICAL/NORMALIZED) que já existia internamente para os relatórios — só que agora exposto como recurso próprio, com filtros <code>tripId</code> e <code>level</code>, e mesma autorização (RN-05) do resto da API.</p>
+    <div class="edge-card">
+      <div class="head"><span class="path-tag">GET /api/alerts?tripId={id}&level=CRITICAL</span><span class="status-pill s2">200 OK</span></div>
+      <h3>Exemplo real — trip com excursões críticas registradas</h3>
+      <p>Chamada real contra a API local, filtrando por uma trip que teve uma excursão térmica crítica de verdade (carga RESFRIADA, limite 4°C, pico de 13.66°C).</p>
+      <pre class="code">GET <span class="s">/api/alerts?tripId=808aa641-ebc5-4815-8ff0-81810c00724a&level=CRITICAL</span>
+X-User-Id: <span class="s">95d20122-5c7b-4be9-9fb0-91eccdc10d83</span>
+
+→ <span class="n">200</span> OK
+[
+  {
+    <span class="k">"id"</span>: <span class="s">"073a7b98-17fb-42b2-b906-50c23301bc0f"</span>,
+    <span class="k">"tripId"</span>: <span class="s">"808aa641-ebc5-4815-8ff0-81810c00724a"</span>,
+    <span class="k">"routeCode"</span>: <span class="s">"ALRT-68192"</span>,
+    <span class="k">"deviceId"</span>: <span class="s">"sensor-682605"</span>,
+    <span class="k">"alertLevel"</span>: <span class="s">"CRITICAL"</span>,
+    <span class="k">"startTime"</span>: <span class="s">"2026-09-21T05:43:34.646Z"</span>,
+    <span class="k">"peakTemperature"</span>: <span class="n">13.66</span>,
+    <span class="k">"meatType"</span>: <span class="s">"CHILLED"</span>,
+    <span class="k">"appliedMinTemperature"</span>: <span class="n">0</span>,
+    <span class="k">"appliedMaxTemperature"</span>: <span class="n">4</span>,
+    <span class="k">"appliedUnit"</span>: <span class="s">"°C"</span>,
+    <span class="k">"description"</span>: <span class="s">"Temperature deviated up to 9,66° from the maximum limit (peak 13,66°), for 0 min"</span>
+  }
+  <span style="color:var(--text-dim)">// … mais 271 itens — essa trip específica foi usada num teste de estresse do simulador</span>
+]</pre>
+      <p style="font-size:12px;color:var(--text-dim);">Sem <code>tripId</code>/<code>level</code>, o endpoint devolve todas as excursões visíveis pro usuário, mais recentes primeiro — é essa chamada sem filtro que alimenta o KPI de "Alertas do Dia" do Dashboard e a lista de Alertas do frontend.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Regras de negócio (casos negativos)</h2><span class="count">5 testes</span></div>
+    <p class="section-desc">Testar só o caminho feliz não prova que as regras existem — então forcei cada violação abaixo de propósito. Todas retornaram exatamente o erro esperado.</p>
+    <div class="edge-grid">
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">POST /api/companies</span><span class="status-pill s4">409 esperado</span></div>
+        <h3>CNPJ duplicado — mensagem não vaza mais o valor</h3>
+        <p>Criar uma segunda empresa com o mesmo CNPJ da que acabou de ser cadastrada. Corrigido nesta rodada: o mesmo princípio de não confirmar "esse login já existe" numa tela de autenticação agora vale pra CNPJ, e-mail, CPF, placa, device_id e código de rota — o valor nunca volta na resposta, só no log do servidor, com um marcador dedicado (ex. <code>CNPJ_ALREADY_EXISTS</code>) e o id de quem tentou o cadastro, pra auditoria.</p>
+        <pre class="code" style="opacity:0.6;"><span style="color:var(--danger);">✕ antes</span> → <span class="n">409</span> Conflict
+<span class="k">"message"</span>: <span class="s">"A company with CNPJ 12.345.678/0001-05 already exists"</span></pre>
+        <pre class="code" style="margin-top:8px;"><span style="color:var(--success);">✓ agora</span> → <span class="n">409</span> Conflict
+<span class="k">"message"</span>: <span class="s">"A company with this CNPJ already exists"</span>
+
+<span style="color:var(--text-dim)">// log do servidor (nunca sai na resposta):</span>
+CNPJ_ALREADY_EXISTS: rejected company creation for CNPJ <span class="s">12.345.678/0001-05</span> (requested by user <span class="s">95d20122-...</span>)</pre>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:4px;">Mesmo padrão aplicado em: <code>POST /api/users</code> (<code>EMAIL_ALREADY_EXISTS</code>), <code>POST /api/vehicles</code> (<code>DEVICE_ID_ALREADY_EXISTS</code> / <code>LICENSE_PLATE_ALREADY_EXISTS</code>), <code>POST /api/drivers</code> (<code>CPF_ALREADY_EXISTS</code>), <code>POST /api/meat-batches</code> (<code>BATCH_CODE_ALREADY_EXISTS</code>) e <code>POST /api/trips</code> (<code>ROUTE_CODE_ALREADY_EXISTS</code>) — todos testados e confirmados nesta rodada.</p>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">POST /api/trips/{id}/meat-batches</span><span class="status-pill s4">409 esperado</span></div>
+        <h3>RN-08 — carga resfriada + congelada no mesmo trip</h3>
+        <p>A trip já carregava um lote CHILLED; tentei anexar um lote FROZEN. Um trigger no Postgres (<code>fn_check_trip_meat_type_compatibility</code>) rejeitou antes de qualquer lógica Java.</p>
+        <pre class="code">→ <span class="n">409</span> Conflict
+<span class="k">"message"</span>: <span class="s">"already carries CHILLED batches; cannot add a FROZEN batch (RN-08)"</span></pre>
+        <div class="shots-pair">
+          <div class="shot-frame"><div class="scroll"><img src="img/02-rn08-conflict-filled.png" alt="Requisicao preenchida no Swagger tentando anexar lote FROZEN"></div><div class="shot-caption">preenchido</div></div>
+          <div class="shot-frame"><div class="scroll"><img src="img/03-rn08-conflict-response.png" alt="Resposta 409 destacada em vermelho no Swagger"></div><div class="shot-caption">resposta 409</div></div>
+        </div>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">PATCH /api/trips/{id}/status</span><span class="status-pill s4">409 esperado</span></div>
+        <h3>Transição de status inválida</h3>
+        <p>Tentei mover uma trip já <b>COMPLETED</b> (estado terminal) de volta para <b>IN_PROGRESS</b>.</p>
+        <pre class="code">→ <span class="n">409</span> Conflict
+<span class="k">"message"</span>: <span class="s">"Cannot transition trip from COMPLETED to IN_PROGRESS (allowed: [])"</span></pre>
+      </div>
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">POST /api/trips/{id}/meat-batches</span><span class="status-pill s4">409 esperado</span></div>
+        <h3>Carregar carga fora de PLANNED</h3>
+        <p>Tentei anexar um lote a uma trip que já estava <b>COMPLETED</b> — só é permitido enquanto <b>PLANNED</b>.</p>
+        <pre class="code">→ <span class="n">409</span> Conflict — carga só pode ser anexada com a trip em PLANNED</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Golden path — pipeline completo com dados reais</h2><span class="count">o teste mais importante</span></div>
+    <p class="section-desc">Em vez de simular a temperatura no teste, publiquei leituras MQTT de verdade usando o simulador Python do próprio repositório (<code>simulator/simulator.py</code>, o mesmo script que simula o firmware ESP32+DS18B20) contra o Mosquitto local, e segui o dado através de toda a cadeia.</p>
+
+    <div class="golden">
+      <div class="golden-steps">
+        <span>1. Lote CHILLED criado</span><span class="arrow">→</span>
+        <span>2. Trip criada (PLANNED)</span><span class="arrow">→</span>
+        <span>3. Carga anexada</span><span class="arrow">→</span>
+        <span>4. Trip iniciada (IN_PROGRESS)</span><span class="arrow">→</span>
+        <span class="now">5. Simulador MQTT publica a cada 1.5s</span><span class="arrow">→</span>
+        <span>6. SSE entrega ao vivo</span><span class="arrow">→</span>
+        <span>7. InfluxDB confere</span><span class="arrow">→</span>
+        <span>8. Trip concluída</span><span class="arrow">→</span>
+        <span>9. Relatório gerado</span>
+      </div>
+
+      <div>
+        <h3 style="font-size:14.5px;margin-bottom:8px;">Passo 5–6 · <code>GET /api/trips/{id}/telemetry/stream</code> — eventos recebidos em tempo real</h3>
+        <div class="live-feed">
+          <div class="ev"><span class="tag">event:telemetry</span></div>
+          <div class="ev"><span class="t">14:22:41.343</span><span>sensor-682605</span><span class="temp">1.59°C</span></div>
+          <div class="ev"><span class="t">14:22:42.843</span><span>sensor-682605</span><span class="temp">2.37°C</span></div>
+          <div class="ev"><span class="t">14:22:44.344</span><span>sensor-682605</span><span class="temp">1.95°C</span></div>
+          <div class="ev"><span class="t">14:22:45.845</span><span>sensor-682605</span><span class="temp">2.50°C</span></div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:14.5px;margin-bottom:8px;">Passo 7 · <code>GET /api/trips/{id}/telemetry/history</code> (InfluxDB) — mesmas 4 leituras, persistidas</h3>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 640 180" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gráfico das 4 leituras de temperatura, todas dentro da faixa segura de 0 a 4 graus">
+            <!-- compliant band 0-4C mapped to y: 4C->y=20, 0C->y=140 -->
+            <rect x="50" y="20" width="560" height="120" fill="var(--success-bg)" stroke="var(--success-border)" stroke-width="1"/>
+            <text x="612" y="24" font-size="10" fill="var(--text-dim)" font-family="IBM Plex Mono, monospace" text-anchor="end">4°C</text>
+            <text x="612" y="144" font-size="10" fill="var(--text-dim)" font-family="IBM Plex Mono, monospace" text-anchor="end">0°C</text>
+            <line x1="50" y1="80" x2="610" y2="80" stroke="var(--border)" stroke-dasharray="3 3"/>
+            <text x="44" y="83" font-size="9" fill="var(--text-dim)" font-family="IBM Plex Mono, monospace" text-anchor="end">2°C</text>
+            <polyline points="110,92.3 250,68.9 390,81.5 530,65" fill="none" stroke="var(--accent-strong)" stroke-width="2.5"/>
+            <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--accent-strong)">
+              <circle cx="110" cy="92.3" r="4"/><text x="110" y="160" text-anchor="middle" fill="var(--text-dim)">14:22:41</text><text x="110" y="84" text-anchor="middle" font-weight="600">1.59</text>
+              <circle cx="250" cy="68.9" r="4"/><text x="250" y="160" text-anchor="middle" fill="var(--text-dim)">14:22:43</text><text x="250" y="60.5" text-anchor="middle" font-weight="600">2.37</text>
+              <circle cx="390" cy="81.5" r="4"/><text x="390" y="160" text-anchor="middle" fill="var(--text-dim)">14:22:44</text><text x="390" y="73" text-anchor="middle" font-weight="600">1.95</text>
+              <circle cx="530" cy="65" r="4"/><text x="530" y="160" text-anchor="middle" fill="var(--text-dim)">14:22:46</text><text x="530" y="56.5" text-anchor="middle" font-weight="600">2.50</text>
+            </g>
+          </svg>
+          <div class="caption">Área verde = faixa segura para carga CHILLED (0–4°C, ANVISA). As 4 leituras da InfluxDB caem exatamente onde o SSE mostrou ao vivo.</div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:14.5px;margin-bottom:8px;">Passo 9 · <code>POST /api/reports</code> — certificado de conformidade calculado sobre os dados reais</h3>
+        <div class="stat-grid">
+          <div class="stat good"><span class="v">4/4</span><span class="l">leituras conformes</span></div>
+          <div class="stat"><span class="v">2.10°C</span><span class="l">média</span></div>
+          <div class="stat"><span class="v">1.59–2.50°C</span><span class="l">min – max</span></div>
+          <div class="stat"><span class="v">0.42</span><span class="l">desvio padrão</span></div>
+          <div class="stat good"><span class="v">COMPLIANT</span><span class="l">status do relatório</span></div>
+        </div>
+        <div class="conclusion">"<b>All 4 readings remained within the applied limits throughout the analyzed period.</b>" — texto de conclusão gerado automaticamente pelo <code>ReportService</code>, número <b>LC-2026-000003</b>.</div>
+      </div>
+    </div>
+
+    <p class="section-desc" style="margin-top:4px;">Para comparação, também testei o <code>POST /api/reports</code> pela própria UI do Swagger (sem dados de telemetria ainda associados) — o mesmo endpoint, mesma validação, resposta 201:</p>
+    <div class="shot-frame">
+      <div class="scroll"><img src="img/04-reports-tag-expanded.png" alt="Grupo Reports expandido no Swagger UI"></div>
+      <div class="shot-caption">Reports ▸ expandido</div>
+    </div>
+    <div class="shots-pair">
+      <div class="shot-frame"><div class="scroll"><img src="img/05-report-generate-filled.png" alt="POST /api/reports preenchido no Swagger"></div><div class="shot-caption">Try it out ▸ preenchido</div></div>
+      <div class="shot-frame"><div class="scroll"><img src="img/06-report-generate-response.png" alt="Resposta 201 com o relatorio gerado"></div><div class="shot-caption">resposta 201</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Exportação em PDF</h2><span class="count">implementado nesta rodada · GET /api/reports/{id}/pdf</span></div>
+    <p class="section-desc">Até aqui a API só devolvia o relatório como JSON — não existia geração de PDF no backend. Implementei um endpoint novo e <b>aditivo</b> (não mexe em nada do que já existia): <code>GET /api/reports/{id}/pdf</code>, mesma autorização do <code>GET /api/reports/{id}</code>. Ele renderiza os dados do relatório num template XHTML interno (nunca exposto por nenhuma rota — só os bytes do PDF final saem) e usa <a href="https://github.com/danfickle/openhtmltopdf" style="color:var(--accent-strong);">Flying Saucer + OpenPDF</a>, uma biblioteca 100% Java: sem browser headless, sem serviço externo, roda dentro da própria JVM.</p>
+    <div class="edge-grid">
+      <div class="edge-card">
+        <div class="head"><span class="path-tag">GET /api/reports/{id}/pdf</span><span class="status-pill s2">200 OK</span></div>
+        <h3>Requisição real via Swagger ▸ Try it out</h3>
+        <p>Documentação do endpoint no Swagger, com o aviso explícito de que o HTML do template nunca é exposto — só o PDF final.</p>
+        <div class="shot-frame"><div class="scroll"><img src="img/07-pdf-endpoint-collapsed.png" alt="Endpoint GET /api/reports/id/pdf documentado no Swagger"></div><div class="shot-caption">endpoint + descrição</div></div>
+      </div>
+      <div class="shots-pair">
+        <div class="shot-frame"><div class="scroll"><img src="img/08-pdf-filled.png" alt="Parametros preenchidos no Swagger para o endpoint de PDF"></div><div class="shot-caption">preenchido</div></div>
+        <div class="shot-frame"><div class="scroll"><img src="img/09-pdf-response.png" alt="Resposta 200 com link de download do PDF"></div><div class="shot-caption">resposta 200 — link de download</div></div>
+      </div>
+      <div class="edge-card">
+        <h3>Cabeçalhos da resposta</h3>
+        <pre class="code">GET <span class="s">/api/reports/c2a9e588-.../pdf</span>
+X-User-Id: <span class="s">95d20122-5c7b-4be9-9fb0-91eccdc10d83</span>
+
+→ <span class="n">200</span> OK
+Content-Type: <span class="s">application/pdf</span>
+Content-Disposition: <span class="s">attachment; filename="LC-2026-000003.pdf"</span>
+Content-Length: <span class="n">3564</span></pre>
+      </div>
+    </div>
+    <p class="section-desc">O PDF gerado nesse teste está salvo em <a href="pdf/LC-2026-000003.pdf" style="color:var(--accent-strong);font-weight:600;">pdf/LC-2026-000003.pdf</a> — 100% produzido pela API, sem edição manual. Como é montado a partir de um template Java (<code>ReportPdfRenderer.java</code>, cópia em <code>pdf/ReportPdfRenderer.java.txt</code>), qualquer ajuste de design (cores, layout, o que aparece) é só editar esse template e a API passa a emitir nesse novo formato para todo relatório futuro.</p>
+  </section>
+
+  <footer>
+    <span><span class="fk">Ambiente:</span> mesma aplicação Spring Boot + Postgres/InfluxDB/Mosquitto local da primeira rodada.</span>
+    <span><span class="fk">Fonte da telemetria:</span> simulator/simulator.py (repo) publicando MQTT de verdade, sem mocks.</span>
+    <span><span class="fk">Atualização 21/09/2026:</span> esta mesma API hoje tem um frontend Angular completo em cima dela (Dashboard, Viagens, Frota, Lotes, Alertas, Relatórios, Administração) — nenhum dado exibido lá é estático, tudo passa pelos endpoints documentados aqui.</span>
+  </footer>
+
+  <a class="back" href="parte1-trips-swagger.html">← Parte 1: Swagger UI + módulo Trips</a>
+
+</div>
+</body>
+</html>
