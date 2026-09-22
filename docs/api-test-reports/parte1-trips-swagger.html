@@ -31,49 +31,6 @@
     --code-str:#f0b86e;
     --code-num:#7fb3f5;
   }
-  :root:not([data-theme="light"]){
-    @media (prefers-color-scheme: dark){
-      --bg:#081420;
-      --surface:#0f1e30;
-      --surface-2:#132840;
-      --border:#20374f;
-      --text:#e9f1fb;
-      --text-dim:#94a9c9;
-      --accent:#5cc8f5;
-      --accent-strong:#8fdcff;
-      --accent-ink:#04223f;
-      --success:#3ecb7c;
-      --success-bg:#0f2a1d;
-      --success-border:#1f4a34;
-      --danger:#ff8478;
-      --danger-bg:#321815;
-      --danger-border:#5a2a24;
-      --line:#25405c;
-      --code-bg:#081320;
-      --code-text:#d9e6f2;
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#081420;
-    --surface:#0f1e30;
-    --surface-2:#132840;
-    --border:#20374f;
-    --text:#e9f1fb;
-    --text-dim:#94a9c9;
-    --accent:#5cc8f5;
-    --accent-strong:#8fdcff;
-    --accent-ink:#04223f;
-    --success:#3ecb7c;
-    --success-bg:#0f2a1d;
-    --success-border:#1f4a34;
-    --danger:#ff8478;
-    --danger-bg:#321815;
-    --danger-border:#5a2a24;
-    --line:#25405c;
-    --code-bg:#081320;
-    --code-text:#d9e6f2;
-  }
-
   body{
     margin:0;
     background:var(--bg);
@@ -138,8 +95,6 @@
   }
   .method.get{ background:#e3edfb; color:#2456a8; }
   .method.ui{ background:var(--surface-2); color:var(--text-dim); }
-  :root:not([data-theme="light"]) .method.get{ background:#132743; color:#8fb8f2; }
-  :root[data-theme="dark"] .method.get{ background:#132743; color:#8fb8f2; }
   .path{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; color:var(--text); }
   .status-pill{
     margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;

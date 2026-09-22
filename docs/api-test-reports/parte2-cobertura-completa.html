@@ -31,49 +31,6 @@
     --code-str:#f0b86e;
     --code-num:#7fb3f5;
   }
-  :root:not([data-theme="light"]){
-    @media (prefers-color-scheme: dark){
-      --bg:#081420;
-      --surface:#0f1e30;
-      --surface-2:#132840;
-      --border:#20374f;
-      --text:#e9f1fb;
-      --text-dim:#94a9c9;
-      --accent:#5cc8f5;
-      --accent-strong:#8fdcff;
-      --accent-ink:#04223f;
-      --success:#3ecb7c;
-      --success-bg:#0f2a1d;
-      --success-border:#1f4a34;
-      --danger:#ff8478;
-      --danger-bg:#321815;
-      --danger-border:#5a2a24;
-      --line:#25405c;
-      --code-bg:#081320;
-      --code-text:#d9e6f2;
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#081420;
-    --surface:#0f1e30;
-    --surface-2:#132840;
-    --border:#20374f;
-    --text:#e9f1fb;
-    --text-dim:#94a9c9;
-    --accent:#5cc8f5;
-    --accent-strong:#8fdcff;
-    --accent-ink:#04223f;
-    --success:#3ecb7c;
-    --success-bg:#0f2a1d;
-    --success-border:#1f4a34;
-    --danger:#ff8478;
-    --danger-bg:#321815;
-    --danger-border:#5a2a24;
-    --line:#25405c;
-    --code-bg:#081320;
-    --code-text:#d9e6f2;
-  }
-
   body{ margin:0; background:var(--bg); color:var(--text); font-family:'Manrope',system-ui,sans-serif; padding-inline:16px; padding-block:32px; }
   .page{ max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:40px; }
   h1,h2,h3{ font-family:'Outfit',system-ui,sans-serif; letter-spacing:-0.01em; text-wrap:balance; margin:0; }
