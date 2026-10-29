@@ -123,14 +123,14 @@
       <span class="chip">🅰️ Angular <b>22.2.0-rc.0</b> · standalone + Signals</span>
       <span class="chip">🎨 SCSS · design tokens próprios</span>
       <span class="chip">🔌 ng-openapi-gen · cliente HTTP gerado</span>
-      <span class="chip">🗓️ <b>21/09/2026</b></span>
+      <span class="chip">🗓️ <b>29/10/2026</b></span>
     </div>
   </header>
 
   <div class="summary">
     <div class="cell ok"><span class="num">16</span><span class="label">telas implementadas</span></div>
-    <div class="cell ok"><span class="num">29</span><span class="label">specs passando</span></div>
-    <div class="cell acc"><span class="num">13</span><span class="label">componentes reutilizáveis</span></div>
+    <div class="cell ok"><span class="num">38</span><span class="label">arquivos de spec passando</span></div>
+    <div class="cell acc"><span class="num">16</span><span class="label">componentes reutilizáveis</span></div>
     <div class="cell"><span class="num">0</span><span class="label">dados estáticos/mockados</span></div>
   </div>
 
@@ -151,12 +151,12 @@
       <div class="res-row"><span class="name">Estado</span><span class="fields">Angular Signals (<code>signal</code>/<code>computed</code>/<code>effect</code>)</span><span class="rule">Sem state manager externo — o app não tem estado compartilhado complexo o bastante pra justificar</span></div>
       <div class="res-row"><span class="name">Cliente HTTP</span><span class="fields"><code>ng-openapi-gen</code> a partir de <code>/v3/api-docs</code> ao vivo</span><span class="rule">Tipos e services nunca são escritos à mão — o DTO gerado é a fonte da verdade</span></div>
       <div class="res-row"><span class="name">Rotas</span><span class="fields">Lazy <code>loadComponent</code> por feature + guards funcionais</span><span class="rule">Cada tela carrega só quando acessada; guards como <code>CanActivateFn</code>, não classes</span></div>
-      <div class="res-row"><span class="name">Formulários</span><span class="fields"><code>FormsModule</code> + <code>ngModel</code> ligado a signals via <code>model()</code></span><span class="rule">Poucos formulários no app (login/registro/busca) — não precisou de Reactive Forms</span></div>
+      <div class="res-row"><span class="name">Formulários</span><span class="fields"><code>FormsModule</code> + <code>ngModel</code> em login/registro/busca; <code>ReactiveFormsModule</code> no <code>OperationForm</code></span><span class="rule">Um único formulário genérico, dirigido por configuração de campos, atende todas as operações de escrita (viagem, veículo, motorista, lote, empresa, usuário, carregamento e relatório)</span></div>
       <div class="res-row"><span class="name">Estilo</span><span class="fields">SCSS com CSS custom properties, sem framework de UI</span><span class="rule">Design system próprio, tokens extraídos direto dos mockups aprovados</span></div>
     </div>
     <div class="folder-tree">src/app/<br>
-&nbsp;&nbsp;<span class="k">core/</span> <span class="c">— shell (header+sidebar), guards, interceptors, CurrentUserService, PageTitleService, TelemetryService</span><br>
-&nbsp;&nbsp;<span class="k">shared/</span> <span class="c">— StatusPill, CargoTypeBadge, SearchBox, DataTable, Card, Button, ToolbarTabs, AdminSubnav...</span><br>
+&nbsp;&nbsp;<span class="k">core/</span> <span class="c">— shell (header+sidebar), guards, interceptors, CurrentUserService, PageTitleService, TelemetryService, OperationService + OperationPermissions, regras de disponibilidade do PDF</span><br>
+&nbsp;&nbsp;<span class="k">shared/</span> <span class="c">— StatusPill, CargoTypeBadge, SearchBox, DataTable, Card, Button, ToolbarTabs, AdminSubnav, OperationForm, ConfirmationDialog, ThermalChart...</span><br>
 &nbsp;&nbsp;<span class="k">api/</span> <span class="c">— cliente HTTP GERADO (nunca editado à mão — regenerar com `npm run generate:api`)</span><br>
 &nbsp;&nbsp;<span class="k">features/</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;auth/ dashboard/ viagens/ frota/ lotes/ alertas/ relatorios/ admin/
@@ -191,7 +191,7 @@
   </section>
 
   <section id="design-system">
-    <div class="section-head"><h2>Design system</h2><span class="count">tokens + 13 componentes compartilhados</span></div>
+    <div class="section-head"><h2>Design system</h2><span class="count">tokens + 16 componentes compartilhados</span></div>
     <p class="section-desc">Paleta extraída dos mockups aprovados (<code>design-references/*.html</code>) e transformada em CSS custom properties globais — nenhum hex solto no meio dos componentes.</p>
     <div class="swatches">
       <div class="swatch"><div class="fill" style="background:#1ca7e0;"></div><div class="info"><b>--accent</b>#1ca7e0</div></div>
@@ -214,6 +214,9 @@
       <span class="comp-chip">Button (directive)</span>
       <span class="comp-chip">AdminSubnav</span>
       <span class="comp-chip">ComingSoon</span>
+      <span class="comp-chip">OperationForm</span>
+      <span class="comp-chip">ConfirmationDialog</span>
+      <span class="comp-chip">ThermalChart</span>
       <span class="comp-chip">Header</span>
       <span class="comp-chip">Sidebar</span>
       <span class="comp-chip">Shell</span>
@@ -222,8 +225,8 @@
   </section>
 
   <section id="telas">
-    <div class="section-head"><h2>Tour pelas telas</h2><span class="count">16 rotas · screenshots reais desta rodada</span></div>
-    <p class="section-desc">Cada screenshot abaixo foi capturado agora, logado como admin, navegando pelo app real (<code>localhost:4200</code>) contra a API real (<code>localhost:8080</code>) — sem mock de rede em nenhuma tela.</p>
+    <div class="section-head"><h2>Tour pelas telas</h2><span class="count">16 rotas · screenshots reais</span></div>
+    <p class="section-desc">Cada screenshot abaixo foi capturado logado como admin, navegando pelo app real (<code>localhost:4200</code>) contra a API real (<code>localhost:8080</code>) — sem mock de rede em nenhuma tela.</p>
 
     <div class="screen-grid">
 
@@ -247,8 +250,8 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Viagens — lista</h3><span class="route-tag">/viagens</span><span class="guard-tag">authGuard</span></div>
-          <p>Busca, abas por status, temperatura atual derivada do alerta mais recente da viagem (ou da última leitura de telemetria, se não houver alerta ativo).</p>
-          <div class="sources">Fontes: <code>GET /api/trips</code> · <code>GET /api/alerts</code> · <code>GET /api/trips/{id}/telemetry/history</code></div>
+          <p>Busca, abas por status, temperatura atual derivada do alerta mais recente da viagem (ou da última leitura de telemetria, se não houver alerta ativo). O botão "Nova Viagem" abre o formulário de criação (fornecedor e transportadora).</p>
+          <div class="sources">Fontes: <code>GET /api/trips</code> · <code>GET /api/alerts</code> · <code>GET /api/trips/{id}/telemetry/history</code> · <code>POST /api/trips</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/03-viagens-lista.png" alt="Lista de viagens"></div></div>
       </div>
@@ -256,8 +259,9 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Viagens — detalhe</h3><span class="route-tag">/viagens/:id</span><span class="guard-tag">authGuard</span></div>
-          <p>Gráfico de temperatura <b>ao vivo</b> via SSE (implementado com <code>fetch</code> + <code>ReadableStream</code>, já que o endpoint exige o header <code>X-User-Id</code> que o <code>EventSource</code> nativo não suporta), lote anexado e linha do tempo da viagem.</p>
-          <div class="sources">Fontes: <code>GET /api/trips/{id}</code> · <code>GET /api/trips/{id}/telemetry/history</code> · <code>GET /api/trips/{id}/telemetry/stream</code> (SSE) · <code>GET /api/alerts?tripId=</code></div>
+          <p>Gráfico de temperatura <b>ao vivo</b> via SSE (implementado com <code>fetch</code> + <code>ReadableStream</code>, já que o endpoint exige o header <code>X-User-Id</code> que o <code>EventSource</code> nativo não suporta), lote anexado e linha do tempo da viagem. Ações da viagem, cada uma liberada só para quem tem permissão:</p>
+          <p>• <b>Carregar lote</b> — viagem PLANEJADA, empresa de origem ou admin;<br>• <b>Iniciar / Concluir / Cancelar viagem</b> — transportadora do motorista ou admin, com diálogo de confirmação e só nas transições válidas (PLANEJADA → EM TRÂNSITO/CANCELADA, EM TRÂNSITO → CONCLUÍDA/CANCELADA);<br>• <b>Gerar Relatório</b> — viagem com ao menos um lote carregado.</p>
+          <div class="sources">Fontes: <code>GET /api/trips/{id}</code> · <code>GET /api/trips/{id}/telemetry/history</code> · <code>GET /api/trips/{id}/telemetry/stream</code> (SSE) · <code>GET /api/alerts?tripId=</code> · <code>POST /api/trips/{id}/meat-batches</code> · <code>PATCH /api/trips/{id}/status</code> · <code>POST /api/reports</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/04-viagem-detalhe.png" alt="Detalhe de viagem com gráfico ao vivo"></div></div>
       </div>
@@ -265,8 +269,8 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Frota — Veículos / Motoristas</h3><span class="route-tag">/frota</span><span class="guard-tag">authGuard</span></div>
-          <p>Uma única tela com abas Veículos/Motoristas. Status ("EM VIAGEM"/"DISPONÍVEL"/"EM MANUTENÇÃO") é <b>derivado</b> de viagens em andamento reais, não um campo fixo.</p>
-          <div class="sources">Fontes: <code>GET /api/vehicles</code> · <code>GET /api/drivers</code> · <code>GET /api/trips</code></div>
+          <p>Uma única tela com abas Veículos/Motoristas. Status ("EM VIAGEM"/"DISPONÍVEL"/"EM MANUTENÇÃO") é <b>derivado</b> de viagens em andamento reais, não um campo fixo. "Novo Veículo" e "Novo Motorista" abrem o formulário de cadastro (transportadora ou admin).</p>
+          <div class="sources">Fontes: <code>GET /api/vehicles</code> · <code>GET /api/drivers</code> · <code>GET /api/trips</code> · <code>POST /api/vehicles</code> · <code>POST /api/drivers</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/05-frota-veiculos.png" alt="Lista de veículos"></div></div>
       </div>
@@ -292,8 +296,8 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Lotes de Carga</h3><span class="route-tag">/lotes</span><span class="guard-tag">authGuard</span></div>
-          <p>Status ("Aguardando embarque"/"Em trânsito"/"Entregue") derivado da viagem à qual o lote está vinculado. A coluna "Produto" do mockup (nomes fictícios como "Peito de frango congelado") foi trocada por "Fornecedor", campo real. Detalhe do lote (<code>/lotes/:id</code>) ainda não tem mockup aprovado — pendência conhecida, ver abaixo.</p>
-          <div class="sources">Fontes: <code>GET /api/meat-batches</code> · <code>GET /api/trips</code></div>
+          <p>Status ("Aguardando embarque"/"Em trânsito"/"Entregue") derivado da viagem à qual o lote está vinculado. A coluna "Produto" do mockup (nomes fictícios como "Peito de frango congelado") foi trocada por "Fornecedor", campo real. "Novo Lote" abre o formulário de cadastro (fornecedor ou admin). Detalhe do lote (<code>/lotes/:id</code>) ainda não tem mockup aprovado — pendência conhecida, ver abaixo.</p>
+          <div class="sources">Fontes: <code>GET /api/meat-batches</code> · <code>GET /api/trips</code> · <code>POST /api/meat-batches</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/08-lotes-lista.png" alt="Lista de lotes de carga"></div></div>
       </div>
@@ -319,7 +323,7 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Relatórios — lista</h3><span class="route-tag">/relatorios</span><span class="guard-tag">authGuard</span></div>
-          <p>Abas Conformes/Não conformes, e um botão de download que baixa um PDF <b>real</b> gerado pela API (<code>GET /api/reports/{id}/pdf</code>) — testado ponta a ponta via Playwright, arquivo <code>%PDF</code> válido de verdade.</p>
+          <p>Abas Conformes/Não conformes, e um botão de download que baixa um PDF <b>real</b> gerado pela API (<code>GET /api/reports/{id}/pdf</code>) — testado ponta a ponta via Playwright, arquivo <code>%PDF</code> válido de verdade. O download só é liberado com a viagem encerrada e o relatório com conclusão (CONFORME/NÃO CONFORME); caso contrário o botão explica o motivo.</p>
           <div class="sources">Fontes: <code>GET /api/reports</code> · <code>GET /api/reports/{id}/pdf</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/11-relatorios-lista.png" alt="Lista de relatórios"></div></div>
@@ -337,8 +341,8 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Administração — Empresas</h3><span class="route-tag">/admin/empresas</span><span class="guard-tag">adminRoleGuard</span></div>
-          <p>Somente leitura. Contagem de usuários por empresa calculada de verdade (cruzando com <code>/api/users</code>) — o mockup tinha uma coluna "Status: Ativa" fixa sem campo real por trás, removida.</p>
-          <div class="sources">Fontes: <code>GET /api/companies</code> · <code>GET /api/users</code></div>
+          <p>Contagem de usuários por empresa calculada de verdade (cruzando com <code>/api/users</code>) — o mockup tinha uma coluna "Status: Ativa" fixa sem campo real por trás, removida. "Nova Empresa" abre o formulário de cadastro, disponível só para <code>ROLE_ADMIN</code>.</p>
+          <div class="sources">Fontes: <code>GET /api/companies</code> · <code>GET /api/users</code> · <code>POST /api/companies</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/13-admin-empresas.png" alt="Administração de empresas"></div></div>
       </div>
@@ -346,8 +350,8 @@
       <div class="screen-card">
         <div class="screen-head">
           <div class="row"><h3>Administração — Usuários</h3><span class="route-tag">/admin/usuarios</span><span class="guard-tag">adminRoleGuard</span></div>
-          <p>Status Ativo/Inativo usa o campo real <code>active</code> do usuário. A coluna "Último acesso" do mockup foi removida — não existe rastreamento de sessão no backend ainda, e inventar essa data seria mentir com dado falso.</p>
-          <div class="sources">Fontes: <code>GET /api/users</code></div>
+          <p>Status Ativo/Inativo usa o campo real <code>active</code> do usuário. A coluna "Último acesso" do mockup foi removida — não existe rastreamento de sessão no backend ainda, e inventar essa data seria mentir com dado falso. "Convidar Usuário" abre o formulário de cadastro (<code>ROLE_ADMIN</code> ou <code>ROLE_COMPANY_ADMIN</code>).</p>
+          <div class="sources">Fontes: <code>GET /api/users</code> · <code>POST /api/users</code></div>
         </div>
         <div class="shot-frame"><div class="scroll"><img src="img/14-admin-usuarios.png" alt="Administração de usuários"></div></div>
       </div>
@@ -406,15 +410,15 @@
     <p class="section-desc">Cada item abaixo foi uma escolha deliberada — nunca inventar uma tela ou campo que não tem mockup aprovado ou dado real por trás, mesmo quando o mockup original sugeria algo mais.</p>
     <div class="pend-list">
       <div class="pend-item"><span class="mark">sem mockup</span><p><b>Detalhe de Lote (<code>/lotes/:id</code>)</b> não foi implementado — existe mockup aprovado da lista, mas não do drill-down. A rota permanece como "em desenvolvimento" até esse mockup existir.</p></div>
-      <div class="pend-item"><span class="mark">decorativo</span><p>Botões de criação ("Nova Viagem", "Novo Veículo", "Novo Motorista", "Nova Empresa", "Convidar Usuário", "Novo Lote") aparecem fiéis ao mockup mas não abrem nenhum formulário — nenhuma dessas telas de criação foi desenhada ainda.</p></div>
-      <div class="pend-item"><span class="mark">decorativo</span><p>"Ver no mapa" (detalhe de viagem) e "Reenviar por e-mail" (detalhe de relatório) não têm endpoint ou mockup de destino — mantidos visualmente fiéis ao mockup, sem ação real.</p></div>
+      <div class="pend-item"><span class="mark">sem tela</span><p><b>Ações corretivas em alertas</b> já existem na API (<code>POST/GET /api/alerts/{id}/actions</code>, com filtro de alertas pendentes e reconhecidos), mas ainda não têm interface no frontend.</p></div>
+      <div class="pend-item"><span class="mark">decorativo</span><p>"Ver no mapa" (detalhe de viagem) não tem endpoint nem mockup de destino — mantido visualmente fiel ao mockup, sem ação real.</p></div>
       <div class="pend-item"><span class="mark">decorativo</span><p>Campo de senha no Login/Registro nunca é validado — ver seção Autenticação acima.</p></div>
       <div class="pend-item"><span class="mark">tema</span><p>Só o tema claro está implementado. Os tokens de design já têm um bloco <code>dark.*</code> reservado nos mockups pra um tema escuro futuro.</p></div>
     </div>
   </section>
 
   <footer>
-    <span><span class="fk">Testes:</span> 29 specs (<code>ng test</code>), um arquivo por componente, cobrindo carregamento inicial e injeção de dependências.</span>
+    <span><span class="fk">Testes:</span> 38 arquivos de spec (<code>ng test</code>), um por componente e serviço, incluindo as regras de permissão das operações de viagem e o envio de cada formulário ao endpoint de escrita correto.</span>
     <span><span class="fk">Verificação visual:</span> cada branch foi conferida com Playwright real contra o app rodando, comparando com o mockup aprovado antes do commit.</span>
   </footer>
 

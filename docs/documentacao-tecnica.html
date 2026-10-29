@@ -72,6 +72,7 @@
   p{ margin:0 0 12px; font-size:14.5px; }
   ul, ol.list{ margin:0 0 14px; padding-left:22px; font-size:14.5px; }
   li{ margin-bottom:6px; }
+  li > ul{ margin:6px 0 0; }
   strong{ color:var(--text); }
   code{
     font-family:'IBM Plex Mono',monospace; background:var(--surface-alt); border:1px solid var(--border);
@@ -98,13 +99,13 @@
 
   .diagram-card{
     background:var(--surface-alt); border:1px solid var(--border); border-radius:12px;
-    padding:20px; margin-bottom:20px;
+    padding:20px; margin-bottom:20px; overflow-x:auto;
   }
   .diagram-card .cap{ font-size:12.5px; color:var(--text-dim); margin-top:12px; }
   .mermaid{ display:flex; justify-content:center; }
 
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  @media (max-width:900px){ .grid2{ grid-template-columns:1fr; } .layout{ grid-template-columns:1fr; } nav.toc{ position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); } main{ padding:32px 20px 80px; } }
+  @media (max-width:900px){ .grid2{ grid-template-columns:1fr; } .layout{ grid-template-columns:1fr; } nav.toc{ position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); } main{ padding:32px 20px 80px; } section.block{ padding:24px 20px; } }
 
   footer{ text-align:center; color:var(--text-dim); font-size:12.5px; padding:32px 0; }
 </style>
@@ -127,6 +128,7 @@
       <li><a href="#decisoes">Decisões técnicas</a></li>
       <li><a href="#testes">Testes realizados</a></li>
       <li><a href="#evidencias">Evidências do desenvolvimento</a></li>
+      <li><a href="#limitacoes">Limitações conhecidas</a></li>
     </ol>
   </nav>
 
@@ -134,23 +136,28 @@
     <header class="hero">
       <div class="eyebrow">Seção 7.10 · Documentação técnica</div>
       <h1>Do hardware ao software</h1>
-      <p>Documentação técnica do ColdChainTracker, sistema B2B de rastreabilidade de cadeia fria: sensor ESP32 + DS18B20, ingestão via MQTT, backend Spring Boot com persistência híbrida (PostgreSQL + InfluxDB), telemetria em tempo real via SSE e painel Angular.</p>
+      <p>Documentação técnica do ColdChainTracker, sistema B2B de rastreabilidade de cadeia fria: sensor ESP32 + DS18B20, ingestão via MQTT (telemetria, estado de conexão e backfill), backend Spring Boot com persistência híbrida (PostgreSQL + InfluxDB), telemetria em tempo real via SSE, certificado de conformidade em PDF e painel Angular.</p>
     </header>
 
     <!-- 7.10.1 Arquitetura -->
     <section class="block" id="arquitetura">
       <h2><span class="num">1</span> Arquitetura</h2>
-      <p class="lead">Arquitetura de ponta a ponta, organizada em cinco camadas desacopladas.</p>
+      <p class="lead">Arquitetura de ponta a ponta, do sensor físico até o painel web, organizada em cinco camadas desacopladas.</p>
 
-      <p>O ColdChainTracker conecta o sensor físico ao painel web em cinco camadas:</p>
       <ol class="list">
-        <li><strong>Hardware</strong> — ESP32 DevKitV1 + sensor DS18B20 (protocolo OneWire), lendo a temperatura no compartimento de carga e publicando via WiFi.</li>
-        <li><strong>Mensageria</strong> — broker MQTT (Eclipse Mosquitto), desacoplando o sensor do backend.</li>
-        <li><strong>Backend</strong> — Spring Boot: ingestão assíncrona de telemetria, regras de negócio (RN-05, RN-08…), persistência híbrida (PostgreSQL para dados de negócio, InfluxDB para séries temporais), exposição via REST + SSE, geração de certificado em PDF.</li>
+        <li><strong>Hardware</strong> — ESP32 DevKitV1 + sensor de temperatura DS18B20 (protocolo OneWire), lendo a cada 2 segundos e publicando via Wi-Fi (2,4 GHz) no broker MQTT.</li>
+        <li><strong>Mensageria</strong> — broker MQTT (Eclipse Mosquitto), desacoplando o sensor do backend. Usa três tópicos por dispositivo:
+          <ul>
+            <li><code>coldchain/telemetry/{device_id}</code> — leituras ao vivo;</li>
+            <li><code>coldchain/status/{device_id}</code> — estado de conexão, com Last Will;</li>
+            <li><code>coldchain/backfill/{device_id}</code> — leituras feitas enquanto o sensor estava offline.</li>
+          </ul>
+        </li>
+        <li><strong>Backend</strong> — Spring Boot: ingestão assíncrona da telemetria e do backfill, monitoramento do estado de conexão dos sensores, regras de negócio (RN-05 isolamento entre empresas, RN-08 compatibilidade de cargas), persistência híbrida (PostgreSQL para dados de negócio, InfluxDB para séries temporais de sensor), exposição via REST + SSE, detecção de excursões térmicas e geração de certificado PDF.</li>
         <li><strong>Contrato de API</strong> — OpenAPI (<code>/v3/api-docs</code>), fonte única de verdade dos tipos, usada para gerar automaticamente o cliente do frontend.</li>
         <li><strong>Frontend</strong> — Angular SPA (standalone components + signals), consumindo REST para dados históricos e SSE para telemetria ao vivo.</li>
       </ol>
-      <p>O diagrama de fluxo de dados completo está na seção <a href="#diagramas">7.10.4 Diagramas</a>.</p>
+      <p>Os diagramas de fluxo de dados, entidades, sequência e modelo lógico estão na seção <a href="#diagramas">7.10.4 Diagramas</a>.</p>
     </section>
 
     <!-- 7.10.2 Tecnologias -->
@@ -160,49 +167,51 @@
 
       <h3>Hardware &amp; firmware</h3>
       <table>
-        <tr><th>Tecnologia</th><th>Papel</th></tr>
-        <tr><td>ESP32 DevKitV1</td><td>Microcontrolador com WiFi integrado, baixo custo, embarcado no veículo</td></tr>
-        <tr><td>DS18B20 (OneWire)</td><td>Sensor de temperatura digital, resolução 12 bits</td></tr>
-        <tr><td>Arduino IDE / C++</td><td>Toolchain do firmware</td></tr>
-        <tr><td>OneWire, DallasTemperature, PubSubClient, ArduinoJson</td><td>Leitura do sensor, cliente MQTT e serialização JSON</td></tr>
-        <tr><td>SNTP (<code>pool.ntp.org</code>)</td><td>Sincronização de relógio antes de publicar (timestamp obrigatório)</td></tr>
+        <tr><th>Tecnologia</th><th>Justificativa</th></tr>
+        <tr><td>ESP32 DevKitV1</td><td>Microcontrolador com Wi-Fi integrado, baixo custo, adequado a um sensor embarcado em veículo</td></tr>
+        <tr><td>DS18B20 (OneWire)</td><td>Sensor de temperatura digital, resolução configurável (12 bits usada aqui), padrão em aplicações de cadeia fria</td></tr>
+        <tr><td>Arduino IDE / C++</td><td>Toolchain padrão e amplamente suportada para ESP32</td></tr>
+        <tr><td>OneWire, DallasTemperature, PubSubClient, ArduinoJson</td><td>Leitura do sensor, cliente MQTT e serialização JSON no firmware</td></tr>
+        <tr><td>SNTP (<code>pool.ntp.org</code>)</td><td>Sincronização de relógio antes de publicar, já que o backend exige timestamp não nulo em cada leitura</td></tr>
       </table>
 
       <h3>Mensageria &amp; simulação</h3>
       <table>
-        <tr><th>Tecnologia</th><th>Papel</th></tr>
-        <tr><td>Eclipse Mosquitto (MQTT)</td><td>Broker de telemetria IoT, desacopla sensor de backend</td></tr>
-        <tr><td>Simulador Python</td><td>Replica o payload exato do firmware para testar sem hardware físico</td></tr>
+        <tr><th>Tecnologia</th><th>Justificativa</th></tr>
+        <tr><td>Eclipse Mosquitto (MQTT)</td><td>Broker leve, padrão de fato para telemetria IoT, desacopla sensor de backend</td></tr>
+        <tr><td>Simulador Python</td><td>Simula o contrato exato do firmware (telemetria, status e backfill), com painel web para controlar vários sensores, provocar excursões térmicas e testar falhas de conexão sem hardware físico</td></tr>
+        <tr><td>Python unittest</td><td>Testes do simulador com cliente MQTT e backend falsos, sem infraestrutura</td></tr>
       </table>
 
       <h3>Backend</h3>
       <table>
-        <tr><th>Tecnologia</th><th>Papel</th></tr>
-        <tr><td>Java 21 + Spring Boot</td><td>REST/SSE, injeção de dependência</td></tr>
-        <tr><td>Spring Integration + Eclipse Paho</td><td>Ingestão MQTT dentro do ecossistema Spring</td></tr>
-        <tr><td>Spring Data JPA + Flyway</td><td>ORM e versionamento de schema relacional</td></tr>
+        <tr><th>Tecnologia</th><th>Justificativa</th></tr>
+        <tr><td>Java 21 + Spring Boot 4.1.1</td><td>Framework robusto para REST/SSE, injeção de dependência, ecossistema maduro</td></tr>
+        <tr><td>Spring Integration + Eclipse Paho</td><td>Ingestão de mensagens MQTT dentro do ecossistema Spring</td></tr>
+        <tr><td>Spring Data JPA + Flyway</td><td>ORM e versionamento de schema relacional (migrations V1 a V14)</td></tr>
         <tr><td>PostgreSQL 16</td><td>Dados de negócio (empresas, viagens, usuários, veículos, lotes, alertas, relatórios)</td></tr>
-        <tr><td>InfluxDB 2.7</td><td>Séries temporais de leituras de sensor</td></tr>
-        <tr><td>springdoc-openapi</td><td>Contrato OpenAPI/Swagger gerado a partir do código</td></tr>
-        <tr><td>Flying Saucer (openpdf)</td><td>Geração do certificado de conformidade em PDF</td></tr>
-        <tr><td>Lombok</td><td>Redução de boilerplate</td></tr>
-        <tr><td>JUnit + Testcontainers (Postgres, InfluxDB, HiveMQ)</td><td>Testes de integração contra infraestrutura real</td></tr>
+        <tr><td>InfluxDB 2.7</td><td>Banco de séries temporais, otimizado para alto volume de escrita de leituras de sensor (série <code>telemetry_temperature</code>)</td></tr>
+        <tr><td>springdoc-openapi</td><td>Geração automática do contrato OpenAPI/Swagger a partir do código</td></tr>
+        <tr><td>Thymeleaf</td><td>Template HTML do certificado, convertido em PDF pelo Flying Saucer</td></tr>
+        <tr><td>Flying Saucer (openpdf)</td><td>Geração do certificado de conformidade sanitária em PDF</td></tr>
+        <tr><td>Lombok</td><td>Redução de boilerplate em entidades/DTOs</td></tr>
+        <tr><td>JUnit + Testcontainers (Postgres, InfluxDB, HiveMQ)</td><td>Testes de integração contra infraestrutura real containerizada, não mocks</td></tr>
       </table>
 
       <h3>Frontend</h3>
       <table>
-        <tr><th>Tecnologia</th><th>Papel</th></tr>
-        <tr><td>Angular 22 (standalone components)</td><td>SPA sem NgModule</td></tr>
-        <tr><td>TypeScript estrito</td><td>Segurança de tipos</td></tr>
-        <tr><td>Signals (Angular)</td><td>Estado local/reativo, sem state manager externo</td></tr>
+        <tr><th>Tecnologia</th><th>Justificativa</th></tr>
+        <tr><td>Angular 22 (standalone components)</td><td>SPA sem NgModule, arquitetura moderna e mais enxuta</td></tr>
+        <tr><td>TypeScript estrito</td><td>Segurança de tipos em toda a aplicação</td></tr>
+        <tr><td>Signals (Angular)</td><td>Estado local/reativo sem necessidade de um state manager externo (NgRx)</td></tr>
         <tr><td>RxJS</td><td>Streams assíncronos (HTTP, SSE)</td></tr>
-        <tr><td>ng-openapi-gen</td><td>Cliente HTTP e DTOs gerados a partir do OpenAPI do backend</td></tr>
+        <tr><td>ng-openapi-gen</td><td>Cliente HTTP e DTOs gerados automaticamente a partir do OpenAPI do backend</td></tr>
         <tr><td>SCSS + design tokens próprios</td><td>Design system próprio, sem framework de UI de terceiros</td></tr>
       </table>
 
       <h3>Infraestrutura</h3>
       <table>
-        <tr><th>Tecnologia</th><th>Papel</th></tr>
+        <tr><th>Tecnologia</th><th>Justificativa</th></tr>
         <tr><td>Docker Compose</td><td>Orquestração local de Postgres, InfluxDB e Mosquitto</td></tr>
       </table>
     </section>
@@ -213,75 +222,227 @@
       <p class="lead">Do firmware funcional ao painel web integrado à API real.</p>
 
       <h3>Firmware (hardware real)</h3>
-      <p>Sketch <code>ESP32_Arduino.ino</code> funcional — conecta ao WiFi, sincroniza hora via SNTP, lê o DS18B20 a cada 2 segundos e publica no broker MQTT. LED onboard (GPIO2) pisca a cada leitura como indicador visual de atividade.</p>
+      <p>Sketch <code>ESP32_Arduino.ino</code> funcional — conecta ao Wi-Fi, sincroniza hora via SNTP, lê o DS18B20 a cada 2 segundos e publica no broker MQTT. LED onboard (GPIO2) pisca a cada leitura como indicador visual de atividade.</p>
 
       <h3>Simulador de sensor (sem hardware)</h3>
-      <p>Script Python que replica exatamente o contrato de payload do firmware real, permitindo testar o pipeline completo (MQTT → backend → frontend) sem depender de hardware físico. As leituras se movem gradativamente (um pequeno passo por vez, não um valor aleatório independente a cada tick), e o cenário é escolhido via <code>--scenario</code>: <code>compliant</code> permanece dentro da faixa segura o trajeto inteiro (relatório aprovado), <code>non-compliant</code> sobe gradualmente até romper o limite, sustenta a excursão e depois recupera (relatório reprovado) — usado pra validar a geração e normalização de alertas.</p>
+      <p>Aplicação Python que replica o contrato MQTT do firmware real. Tem dois modos: <strong>terminal</strong>, com um sensor e cenário <code>compliant</code> ou <code>non-compliant</code> (<code>--scenario</code>); e <strong>painel web</strong> (<code>--ui</code>), que controla vários sensores ao vivo. No painel, cada sensor permite:</p>
+      <ul>
+        <li><strong>Ciclo de conexão:</strong> ligar, perder sinal, cortar energia e religar com reenvio das leituras offline (backfill);</li>
+        <li><strong>Eventos de temperatura:</strong> abertura de porta, pico crítico, falha de refrigeração e falha longa de 16 min;</li>
+        <li><strong>Testes de robustez:</strong> JSON malformado, leitura incompleta, backfill no futuro e duplicado.</li>
+      </ul>
+      <p>Inclui também uma verificação ponta a ponta (<code>e2e.py</code>) contra o broker e o backend reais.</p>
 
       <h3>Mockups de telas (aprovados)</h3>
       <p>16 mockups estáticos HTML/CSS cobrindo Login, Registro, Dashboard, Viagens (lista/detalhe), Frota/Veículo/Motorista, Lotes, Alertas (lista/detalhe), Relatórios (lista/detalhe) e Administração (Empresas/Usuários/Limites) — usados como fonte da verdade de layout, espaçamento e cores para a implementação.</p>
 
       <h3>Protótipo funcional (SPA Angular)</h3>
+      <p>Implementado e integrado à API real:</p>
       <p>
         <span class="pill ok">pronto</span> Login/Registro, Shell (sidebar + header dinâmico por papel/empresa)&nbsp;&nbsp;
         <span class="pill ok">pronto</span> Dashboard com KPIs&nbsp;&nbsp;
-        <span class="pill ok">pronto</span> Viagens: lista + detalhe com telemetria SSE ao vivo&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Operações de escrita: criação de viagem, mudança de status (com permissão por empresa) e carregamento de lotes na viagem
+      </p>
+      <p>
+        <span class="pill ok">pronto</span> Viagens: lista (busca, abas de status, temperatura ao vivo) + detalhe (gráfico de telemetria em tempo real via SSE, timeline de eventos)&nbsp;&nbsp;
         <span class="pill ok">pronto</span> Frota: lista, veículo, motorista
       </p>
       <p>
         <span class="pill ok">pronto</span> Lotes de Carga: lista&nbsp;&nbsp;
         <span class="pill ok">pronto</span> Alertas: lista + detalhe&nbsp;&nbsp;
-        <span class="pill ok">pronto</span> Relatórios: lista + detalhe&nbsp;&nbsp;
-        <span class="pill ok">pronto</span> Administração: Empresas, Usuários, Limites (protegido por <code>adminRoleGuard</code>)
+        <span class="pill ok">pronto</span> Relatórios: lista + detalhe (preview do certificado)&nbsp;&nbsp;
+        <span class="pill ok">pronto</span> Administração: Empresas, Usuários, Limites (protegido por <code>adminRoleGuard</code>, só <code>ROLE_ADMIN</code>/<code>ROLE_COMPANY_ADMIN</code>)
       </p>
       <p>
-        <span class="pill todo">pendente</span> Detalhe de Lote (<code>/lotes/:id</code>) — único item ainda sem mockup aprovado, aguardando design antes de implementar
+        <span class="pill warn">stand-in</span> Login: mantém o layout com e-mail e senha, mas hoje identifica o usuário apenas pelo e-mail (ver <a href="#decisoes">Autenticação stand-in</a>)
       </p>
-      <p class="cap" style="color:var(--text-dim); font-size:13px;">15 das 16 telas do mockup aprovado já estão implementadas e integradas à API real; só falta o drill-down de Detalhe de Lote.</p>
+      <p>
+        <span class="pill todo">pendente</span> Detalhe de Lote (<code>/lotes/:id</code>) — falta o mockup de drill-down antes de implementar
+      </p>
     </section>
 
     <!-- 7.10.4 Diagramas -->
     <section class="block" id="diagramas">
       <h2><span class="num">4</span> Diagramas</h2>
-      <p class="lead">Diagrama de arquitetura (fluxo de dados) e modelo lógico do banco de dados.</p>
+      <p class="lead">Fluxo de dados, entidades principais, sequência da leitura até o certificado e modelo lógico do banco.</p>
 
+      <h3>Fluxo de dados (hardware → software)</h3>
       <div class="diagram-card">
         <div class="mermaid">
 flowchart TD
     subgraph Origem ["Origem dos Dados"]
         ESP32["ESP32 + DS18B20 (Hardware)"]
-        Simulador["Simulador Python (sem HW)"]
+        Simulador["Simulador Python (terminal / painel --ui)"]
     end
 
     Broker["Mosquitto (Broker MQTT)"]
 
     subgraph Backend ["Backend Spring Boot"]
         Ingestion["TelemetryIngestionService"]
+        Backfill["TelemetryBackfillService"]
+        Monitor["DeviceConnectionMonitor"]
+        Reports["ReportService + ExcursionDetectionService"]
         Postgres[(PostgreSQL - Negócio)]
-        Influx[(InfluxDB - Séries Temporais)]
+        Influx[(InfluxDB - telemetry_temperature)]
         API["REST API + SSE (/v3/api-docs)"]
 
-        Ingestion --> Postgres
         Ingestion --> Influx
         Ingestion --> API
+        Ingestion --> Monitor
+        Backfill --> Influx
+        Monitor --> API
+        Reports --> Influx
+        Reports --> Postgres
+        API --> Postgres
     end
 
     Frontend["Frontend Angular (SPA)"]
 
-    ESP32 -- "MQTT publish" --> Broker
-    Simulador -. "simula" .-> ESP32
-    Broker -- "Spring Integration (subscribe)" --> Ingestion
+    ESP32 -- "coldchain/telemetry" --> Broker
+    Simulador -- "telemetry, status, backfill" --> Broker
+    Broker -- "telemetry" --> Ingestion
+    Broker -- "backfill" --> Backfill
+    Broker -- "status (Last Will)" --> Monitor
     API -- "HTTP + SSE" --> Frontend
         </div>
-        <p class="cap">Diagrama de arquitetura — do sensor (real ou simulado) até o painel Angular, passando pelo broker MQTT e pela ingestão do backend.</p>
+        <p class="cap">Fluxo de dados: Sensor → MQTT → Backend (ingestão, backfill e estado de conexão) → PostgreSQL/InfluxDB → REST/SSE → Frontend. O firmware atual publica só a telemetria; o simulador cobre os três tópicos.</p>
       </div>
 
+      <h3>Entidades principais (domínio do backend)</h3>
+      <div class="diagram-card">
+        <div class="mermaid">
+classDiagram
+    direction LR
+    class Company {
+        UUID id
+        String corporateName
+        String cnpj
+        CompanyType companyType
+    }
+    class AppUser {
+        UUID id
+        String name
+        String email
+        Role role
+        boolean active
+    }
+    class Vehicle {
+        UUID id
+        String licensePlate
+        String deviceId
+        BigDecimal loadCapacityKg
+    }
+    class Driver {
+        UUID id
+        String name
+        String cpf
+        String cnh
+    }
+    class MeatBatch {
+        UUID id
+        String batchCode
+        MeatType meatType
+        BigDecimal weightKg
+    }
+    class Trip {
+        UUID id
+        String routeCode
+        TripStatus status
+        Instant startedAt
+        Instant finishedAt
+    }
+    class ComplianceThreshold {
+        MeatType meatType
+        BigDecimal minTemperature
+        BigDecimal maxTemperature
+        BigDecimal criticalDeviation
+        int toleranceMinutes
+    }
+    class Report {
+        UUID id
+        String reportNumber
+        int version
+        ReportStatus status
+        BigDecimal mktTemperature
+        int dataGapCount
+    }
+    class ThermalExcursion {
+        UUID id
+        Instant startTime
+        Instant endTime
+        BigDecimal peakTemperature
+        AlertLevel alertLevel
+    }
+    class AlertAction {
+        UUID id
+        Instant excursionStartTime
+        String correctiveAction
+    }
+
+    Company "1" --> "*" AppUser : possui
+    Company "1" --> "*" Vehicle : possui
+    Company "1" --> "*" Driver : emprega
+    Company "1" --> "*" MeatBatch : origina
+    Trip "*" --> "1" Vehicle
+    Trip "*" --> "1" Driver
+    Trip "*" --> "1" Company : origem
+    Trip "*" --> "1" Company : destino
+    Trip "*" --> "*" MeatBatch : transporta
+    MeatBatch ..> ComplianceThreshold : meatType
+    Trip "1" --> "*" Report : gera
+    Report "1" --> "*" ThermalExcursion : registra
+    Trip "1" --> "*" AlertAction : ações corretivas
+    AppUser "1" --> "*" AlertAction : executa
+        </div>
+        <p class="cap">Entidades JPA do domínio. A transportadora de uma viagem é a dona do veículo; o limite de conformidade é escolhido pelo tipo de carga do lote (CONGELADA ou RESFRIADA).</p>
+      </div>
+
+      <h3>Sequência (leitura do sensor até o certificado)</h3>
+      <div class="diagram-card">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant S as ESP32 / Simulador
+    participant B as Mosquitto
+    participant I as TelemetryIngestionService
+    participant DB as PostgreSQL
+    participant TS as InfluxDB
+    participant F as Frontend Angular
+    participant R as ReportService
+
+    S->>B: publish coldchain/telemetry/esp32-001
+    B->>I: mensagem (QoS 1)
+    I->>DB: viagem IN_PROGRESS do device_id
+    alt sem viagem em andamento
+        I-->>I: descarta a leitura
+    else viagem encontrada
+        I->>TS: grava ponto em telemetry_temperature
+        I-->>F: SSE /api/trips/{id}/telemetry/stream
+    end
+    opt sensor offline e depois religado
+        B->>I: Last Will em coldchain/status (OFFLINE)
+        S->>B: publish coldchain/backfill/esp32-001
+        B->>I: lote de leituras offline
+        I->>TS: grava leituras novas, descarta duplicadas e futuras
+    end
+    F->>R: POST /api/reports (viagem concluída)
+    R->>DB: limite de conformidade do tipo de carga
+    R->>TS: histórico do período
+    R->>R: excursões ATENÇÃO/CRÍTICO, MKT e períodos sem dados
+    R->>DB: grava relatório (nova versão) e excursões
+    F->>R: GET /api/reports/{id}/pdf
+    R-->>F: certificado em PDF
+        </div>
+        <p class="cap">A leitura ao vivo só é gravada e transmitida; os alertas nascem na geração do relatório, a partir do histórico completo da viagem.</p>
+      </div>
+
+      <h3>Modelo lógico (PostgreSQL)</h3>
       <div class="diagram-card">
         <div class="mermaid">
 erDiagram
 
     COMPANIES {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(150) corporate_name
         VARCHAR(100) trade_name
         VARCHAR(18) cnpj UK
@@ -290,66 +451,75 @@ erDiagram
         VARCHAR(100) email
         VARCHAR(100) city
         VARCHAR(50) state
-        DATETIME created_at
+        TIMESTAMPTZ created_at
     }
 
     APP_USERS {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(100) name
         VARCHAR(100) email UK
         VARCHAR(255) password_hash
         VARCHAR(20) role
         BOOLEAN active
-        CHAR(36) company_id FK
-        DATETIME created_at
+        UUID company_id FK
+        TIMESTAMPTZ created_at
     }
 
     VEHICLES {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(10) license_plate UK
         VARCHAR(100) model
-        DECIMAL load_capacity_kg
+        NUMERIC load_capacity_kg
         VARCHAR(50) device_id UK
         BOOLEAN active
-        CHAR(36) owner_company_id FK
-        DATETIME created_at
+        UUID owner_company_id FK
+        TIMESTAMPTZ created_at
     }
 
     DRIVERS {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(100) name
         VARCHAR(14) cpf UK
         VARCHAR(20) cnh
         VARCHAR(20) phone
-        CHAR(36) carrier_company_id FK
-        DATETIME created_at
+        UUID carrier_company_id FK
+        TIMESTAMPTZ created_at
     }
 
     MEAT_BATCHES {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(50) batch_code UK
         VARCHAR(10) meat_type
-        DECIMAL weight_kg
-        CHAR(36) origin_company_id FK
-        DATETIME created_at
+        NUMERIC weight_kg
+        UUID origin_company_id FK
+        TIMESTAMPTZ created_at
     }
 
     TRIPS {
-        CHAR(36) id PK
+        UUID id PK
         VARCHAR(50) route_code UK
-        CHAR(36) vehicle_id FK
-        CHAR(36) driver_id FK
-        CHAR(36) origin_company_id FK
-        CHAR(36) destination_company_id FK
+        UUID vehicle_id FK "uma IN_PROGRESS por veículo"
+        UUID driver_id FK
+        UUID origin_company_id FK
+        UUID destination_company_id FK
         VARCHAR(20) status
-        DATETIME started_at
-        DATETIME finished_at
-        DATETIME created_at
+        TIMESTAMPTZ started_at
+        TIMESTAMPTZ finished_at
+        TIMESTAMPTZ created_at
     }
 
     TRIP_MEAT_BATCHES {
-        CHAR(36) trip_id PK, FK
-        CHAR(36) meat_batch_id PK, FK
+        UUID trip_id PK, FK
+        UUID meat_batch_id PK, FK "trigger RN-08"
+    }
+
+    COMPLIANCE_THRESHOLDS {
+        VARCHAR(10) meat_type PK
+        NUMERIC min_temperature
+        NUMERIC max_temperature
+        VARCHAR(5) unit
+        NUMERIC critical_deviation
+        INT tolerance_minutes
     }
 
     REPORT_NUMBER_COUNTERS {
@@ -359,58 +529,74 @@ erDiagram
     }
 
     REPORTS {
-        CHAR(36) id PK
-        VARCHAR(30) report_number UK
+        UUID id PK
+        VARCHAR(30) report_number UK "único com version"
+        INT version UK
         VARCHAR(30) report_type
-        CHAR(36) trip_id FK
+        UUID trip_id FK
         VARCHAR(10) meat_type
-        DECIMAL applied_min_temperature
-        DECIMAL applied_max_temperature
+        NUMERIC applied_min_temperature
+        NUMERIC applied_max_temperature
         VARCHAR(5) applied_unit
-        DATETIME period_start
-        DATETIME period_end
+        NUMERIC applied_critical_deviation
+        INT applied_tolerance_minutes
+        INT applied_data_gap_threshold_minutes
+        TIMESTAMPTZ period_start
+        TIMESTAMPTZ period_end
         VARCHAR(20) status
         VARCHAR(200) location_label
         VARCHAR(200) sector_label
         VARCHAR(2000) general_notes
         VARCHAR(1000) conclusion_text
-        CHAR(36) generated_by_user_id FK
-        CHAR(36) technical_responsible_user_id FK
-        INT version
+        UUID generated_by_user_id FK
+        UUID technical_responsible_user_id FK
         INT reading_count
         INT compliant_reading_count
         INT non_compliant_reading_count
-        DECIMAL min_temperature
-        DECIMAL max_temperature
-        DECIMAL avg_temperature
-        DECIMAL median_temperature
-        DECIMAL stddev_temperature
-        DECIMAL max_temperature_exceeded
-        DECIMAL min_temperature_exceeded
+        NUMERIC min_temperature
+        NUMERIC max_temperature
+        NUMERIC avg_temperature
+        NUMERIC median_temperature
+        NUMERIC stddev_temperature
+        NUMERIC mkt_temperature
+        NUMERIC max_temperature_exceeded
+        NUMERIC min_temperature_exceeded
         BIGINT total_excursion_minutes
         BIGINT longest_excursion_minutes
         INT excursion_event_count
-        DATETIME generated_at
-        DATETIME created_at
+        INT data_gap_count
+        BIGINT total_data_gap_minutes
+        BIGINT longest_data_gap_minutes
+        TIMESTAMPTZ generated_at
+        TIMESTAMPTZ created_at
     }
 
     THERMAL_EXCURSIONS {
-        CHAR(36) id PK
-        CHAR(36) trip_id FK
-        CHAR(36) report_id FK
-        DATETIME start_time
-        DATETIME end_time
+        UUID id PK
+        UUID trip_id FK
+        UUID report_id FK
+        TIMESTAMPTZ start_time
+        TIMESTAMPTZ end_time
         BIGINT duration_minutes
-        DECIMAL peak_temperature
-        DECIMAL avg_deviation_temperature
+        NUMERIC peak_temperature
+        NUMERIC avg_deviation_temperature
         VARCHAR(20) alert_level
         VARCHAR(255) description
-        DATETIME created_at
+        TIMESTAMPTZ created_at
+    }
+
+    ALERT_ACTIONS {
+        UUID id PK
+        UUID trip_id FK
+        TIMESTAMPTZ excursion_start_time
+        VARCHAR(1000) corrective_action
+        UUID performed_by_user_id FK
+        TIMESTAMPTZ created_at
     }
 
     COMPANIES ||--o{ APP_USERS : "possui"
     COMPANIES ||--o{ VEHICLES : "possui"
-    COMPANIES ||--o{ DRIVERS : "possui"
+    COMPANIES ||--o{ DRIVERS : "emprega"
     COMPANIES ||--o{ MEAT_BATCHES : "origina"
     COMPANIES ||--o{ TRIPS : "origem"
     COMPANIES ||--o{ TRIPS : "destino"
@@ -418,13 +604,16 @@ erDiagram
     DRIVERS ||--o{ TRIPS : "conduz"
     TRIPS ||--o{ TRIP_MEAT_BATCHES : "possui"
     MEAT_BATCHES ||--o{ TRIP_MEAT_BATCHES : "transportado_em"
+    COMPLIANCE_THRESHOLDS ||..o{ MEAT_BATCHES : "limita (meat_type)"
     TRIPS ||--o{ REPORTS : "gera"
     APP_USERS ||--o{ REPORTS : "gera"
     APP_USERS ||--o{ REPORTS : "responsavel_tecnico"
     TRIPS ||--o{ THERMAL_EXCURSIONS : "possui"
     REPORTS ||--o{ THERMAL_EXCURSIONS : "registra"
+    TRIPS ||--o{ ALERT_ACTIONS : "recebe"
+    APP_USERS ||--o{ ALERT_ACTIONS : "executa"
         </div>
-        <p class="cap">Modelo lógico do banco de dados relacional (PostgreSQL) — empresas, usuários, frota, lotes, viagens, relatórios de conformidade e excursões térmicas.</p>
+        <p class="cap">Modelo lógico (PostgreSQL): tabelas, chaves e relacionamentos conforme as migrations Flyway V1 a V14. As leituras dos sensores não ficam no PostgreSQL: são gravadas no InfluxDB, na série <code>telemetry_temperature</code> (tags <code>device_id</code>, <code>vehicle_id</code>, <code>trip_id</code>, <code>route_code</code>; campo <code>temperature</code>).</p>
       </div>
     </section>
 
@@ -438,48 +627,70 @@ erDiagram
           <pre><code>{ "device_id": "esp32-001", "temperature": 2.3, "timestamp": "2026-01-01T12:00:00Z" }</code></pre>
         </li>
         <li>O sensor <strong>não sabe</strong> qual viagem está em andamento — o <code>trip_id</code> nunca é enviado. O backend resolve a viagem ativa a partir do <code>device_id</code> (associado ao veículo), buscando a viagem em status <code>IN_PROGRESS</code>; se não houver, a leitura é descartada silenciosamente.</li>
-        <li>O backend grava a leitura no InfluxDB (série temporal) e avalia a regra de conformidade conforme o tipo de carga do lote associado à viagem.</li>
-        <li>Se a temperatura sair da faixa permitida, um alerta é criado/atualizado (<code>WARNING</code>/<code>CRITICAL</code>); ao normalizar, o alerta passa a <code>NORMALIZED</code> (regra RN-05 controla quem enxerga cada alerta).</li>
-        <li>A leitura é propagada em tempo real ao frontend via <strong>SSE</strong>, atualizando o gráfico da tela de Detalhe de Viagem sem polling.</li>
-        <li>Ao concluir a viagem (<code>COMPLETED</code>), o backend agrega o histórico de leituras e gera um <strong>certificado de conformidade em PDF</strong>, disponível na tela de Relatórios.</li>
+        <li>O backend grava a leitura no InfluxDB e a transmite em tempo real ao frontend via <strong>SSE</strong>, atualizando o gráfico da tela de Detalhe de Viagem sem polling.</li>
+        <li>Se o sensor perde a conexão, o broker publica o <strong>Last Will</strong> e o sistema marca o dispositivo como OFFLINE. Ao reconectar, o sensor reenvia as leituras feitas offline pelo tópico de <strong>backfill</strong>; o backend descarta duplicadas e leituras com horário no futuro.</li>
+        <li>Ao gerar um relatório da viagem, o backend analisa o histórico do período e detecta as excursões térmicas conforme o limite de conformidade do tipo de carga (<code>ComplianceThreshold</code>). Cada excursão vira um alerta classificado como:
+          <ul>
+            <li><span class="pill" style="color:var(--danger); border-color:var(--danger);">CRÍTICO</span> quando o desvio passa de 2 °C além da faixa, qualquer que seja a duração, ou quando dura mais que a tolerância de 15 min;</li>
+            <li><span class="pill warn">ATENÇÃO</span> quando é curta e dentro da tolerância, como uma abertura de porta.</li>
+          </ul>
+          Só alertas críticos reprovam o relatório. A visibilidade dos alertas segue a RN-05: cada empresa vê apenas os das viagens de que participa.
+        </li>
+        <li>Com a viagem concluída, um usuário gera o <strong>certificado de conformidade</strong>, disponível em PDF na tela de Relatórios. Ele contém:
+          <ul>
+            <li>as estatísticas do período, incluindo a temperatura cinética média (MKT) e os períodos sem dados;</li>
+            <li>as excursões;</li>
+            <li>os limites aplicados, que ficam congelados no certificado.</li>
+          </ul>
+          Se leituras atrasadas chegarem depois, o relatório ganha uma nova versão, e as anteriores são mantidas.
+        </li>
       </ol>
     </section>
 
     <!-- 7.10.6 Requisitos -->
     <section class="block" id="requisitos">
       <h2><span class="num">6</span> Requisitos</h2>
-      <p class="lead">Funcionais (implementados e planejados) e não funcionais.</p>
+      <p class="lead">Funcionais (implementados) e não funcionais.</p>
 
       <h3>Funcionais — implementados</h3>
       <table>
         <tr><th>ID</th><th>Descrição</th></tr>
-        <tr><td>RF01</td><td>Cadastro e identificação de empresas dos três tipos (SUPPLIER, CARRIER, RECIPIENT) e usuários com papéis distintos</td></tr>
+        <tr><td>RF01</td><td>Cadastro e identificação de empresas dos três tipos (SUPPLIER, CARRIER, RECIPIENT) e de usuários com papéis distintos</td></tr>
         <tr><td>RF02</td><td>Cadastro de veículos (com <code>device_id</code> do sensor) e motoristas por transportadora</td></tr>
         <tr><td>RF03</td><td>Criação de viagem associando fornecedor, transportadora, destinatário, veículo, motorista e lote de carga</td></tr>
         <tr><td>RF04</td><td>Ingestão de leituras de temperatura via MQTT, associadas automaticamente à viagem em andamento</td></tr>
         <tr><td>RF05</td><td>Exibição de telemetria em tempo real (SSE) na tela de detalhe da viagem</td></tr>
-        <tr><td>RF06</td><td>Geração automática de alertas quando a temperatura sai da faixa de conformidade</td></tr>
-        <tr><td>RF07</td><td>Geração de certificado de conformidade em PDF ao final da viagem</td></tr>
-        <tr><td>RF08 (RN-05)</td><td>Visibilidade de alertas filtrada por papel/tipo de empresa do usuário</td></tr>
-        <tr><td>RF09 (RN-08)</td><td>Regras de transição de status de viagem (ex.: impedir conflitos de estado)</td></tr>
+        <tr><td>RF06</td><td>Detecção de excursões térmicas e geração de alertas (ATENÇÃO/CRÍTICO) a partir do histórico da viagem, conforme a faixa, o desvio crítico e a tolerância do tipo de carga</td></tr>
+        <tr><td>RF07</td><td>Geração de certificado de conformidade em PDF para viagens concluídas, com versionamento quando chegam leituras atrasadas</td></tr>
+        <tr><td>RF08 (RN-05)</td><td>Isolamento entre empresas: cada empresa só vê viagens, alertas e relatórios das viagens de que participa como origem, transportadora ou destino</td></tr>
+        <tr><td>RF09 (RN-08)</td><td>Regras de transição de status de viagem, e proibição de misturar cargas RESFRIADAS e CONGELADAS na mesma viagem</td></tr>
         <tr><td>RF10</td><td>Listagem de Lotes de Carga associados às viagens da empresa</td></tr>
         <tr><td>RF11</td><td>Listagem e detalhe de Alertas, com filtro por viagem e nível de severidade</td></tr>
         <tr><td>RF12</td><td>Listagem e detalhe de Relatórios de conformidade, com preview do certificado</td></tr>
         <tr><td>RF13</td><td>Telas de Administração (Empresas, Usuários, Limites de conformidade), restritas a <code>ROLE_ADMIN</code>/<code>ROLE_COMPANY_ADMIN</code></td></tr>
+        <tr><td>RF14</td><td>Monitoramento do estado de conexão do sensor (ONLINE/INSTÁVEL/OFFLINE) via MQTT com Last Will</td></tr>
+        <tr><td>RF15</td><td>Recebimento de leituras feitas offline (backfill), descartando duplicadas e com horário no futuro</td></tr>
+        <tr><td>RF16</td><td>Limites de conformidade configuráveis no banco (faixa, desvio crítico e tolerância), congelados em cada relatório emitido</td></tr>
+        <tr><td>RF17</td><td>Registro de ação corretiva em alertas, restrito à empresa de origem, à transportadora e ao administrador, com filtro de alertas pendentes e reconhecidos (disponível na API)</td></tr>
+        <tr><td>RF18</td><td>Métricas sanitárias no certificado: temperatura cinética média (MKT), períodos sem dados e tempo exato fora da faixa</td></tr>
+        <tr><td>RF19</td><td>Operações de escrita no frontend: criação de viagem, mudança de status e carregamento de lotes</td></tr>
       </table>
 
       <h3>Funcionais — planejados</h3>
-      <p>Detalhe de Lote (<code>/lotes/:id</code>) — único item ainda pendente; falta desenhar o mockup de drill-down antes de implementar a rota.</p>
+      <p>Detalhe de Lote (<code>/lotes/:id</code>) e tela de ações corretivas em alertas — ver <a href="#limitacoes">Limitações conhecidas</a>.</p>
 
       <h3>Não funcionais</h3>
       <table>
         <tr><th>ID</th><th>Descrição</th></tr>
         <tr><td>RNF01</td><td>Telemetria deve chegar ao frontend em tempo real, sem polling (SSE)</td></tr>
-        <tr><td>RNF02</td><td>Persistência de séries temporais de alto volume separada da persistência relacional de negócio</td></tr>
+        <tr><td>RNF02</td><td>Persistência de séries temporais de alto volume separada da persistência relacional de negócio (InfluxDB vs. PostgreSQL)</td></tr>
         <tr><td>RNF03</td><td>Contrato de API único (OpenAPI) como fonte da verdade, evitando divergência entre frontend e backend</td></tr>
-        <tr><td>RNF04</td><td>Todo texto da interface em português (pt-BR); nomenclatura de domínio fixa e documentada</td></tr>
+        <tr><td>RNF04</td><td>Todo texto da interface em português (pt-BR); nomenclatura de domínio (tipos de carga, status, severidade) fixa e documentada</td></tr>
         <tr><td>RNF05</td><td>Sensor físico desacoplado da lógica de negócio (não conhece viagem, apenas <code>device_id</code>)</td></tr>
         <tr><td>RNF06</td><td>Controle de acesso por papel nas rotas administrativas: usuário sem <code>ROLE_ADMIN</code>/<code>ROLE_COMPANY_ADMIN</code> é redirecionado ao Dashboard ao tentar acessar <code>/admin/*</code></td></tr>
+        <tr><td>RNF07</td><td>Desempenho de acesso a dados: as listagens executam um número constante de consultas ao banco, sem N+1, independentemente da quantidade de itens</td></tr>
+        <tr><td>RNF08</td><td>Rastreabilidade do certificado: cada relatório guarda os limites aplicados e sua versão, de modo que mudanças futuras nas regras não alteram certificados já emitidos</td></tr>
+        <tr><td>RNF09</td><td>Tolerância a falhas de conexão do sensor: leituras feitas offline não se perdem e são incorporadas ao histórico ao reconectar</td></tr>
       </table>
     </section>
 
@@ -488,30 +699,50 @@ erDiagram
       <h2><span class="num">7</span> Decisões técnicas</h2>
       <p class="lead">Escolhas de arquitetura e a razão por trás de cada uma.</p>
       <ul>
-        <li><strong>Persistência híbrida (PostgreSQL + InfluxDB):</strong> dados de negócio em banco relacional; leituras de sensor de alto volume em banco de séries temporais — separação motivada por padrão de acesso e volume muito diferentes.</li>
-        <li><strong>MQTT como camada de ingestão IoT:</strong> desacopla o firmware do backend; o sensor publica de forma "fire-and-forget", sem conhecer a API REST nem autenticação.</li>
-        <li><strong><code>trip_id</code> nunca enviado pelo sensor:</strong> o hardware (e o simulador, que replica o mesmo contrato) só sabe seu próprio <code>device_id</code>; a associação com a viagem ativa é responsabilidade exclusiva do backend, evitando acoplamento entre hardware e sistema de viagens.</li>
+        <li><strong>Persistência híbrida (PostgreSQL + InfluxDB):</strong> dados de negócio (viagens, empresas, alertas) em banco relacional; leituras de sensor de alto volume em banco de séries temporais — separação motivada por padrão de acesso e volume muito diferentes.</li>
+        <li><strong>MQTT como camada de ingestão IoT:</strong> desacopla o firmware do backend; o sensor publica de forma "fire-and-forget", sem precisar conhecer a API REST nem autenticação.</li>
+        <li><strong><code>trip_id</code> nunca enviado pelo sensor:</strong> o hardware (e o simulador, que replica o mesmo contrato) só sabe seu próprio <code>device_id</code>; a associação com a viagem ativa é responsabilidade exclusiva do backend, evitando acoplamento e erros de sincronização entre hardware e sistema de viagens.</li>
         <li><strong>SSE em vez de WebSocket/polling:</strong> a telemetria é um fluxo unidirecional (servidor → cliente); SSE é mais simples de operar que WebSocket para esse caso de uso e evita o custo de polling.</li>
-        <li><strong>Autenticação stand-in via <code>X-User-Id</code>:</strong> a API ainda não tem login real (senha/JWT). Um interceptor injeta esse header em toda chamada do frontend; papel e tipo de empresa são resolvidos uma vez e cacheados em signal — decisão documentada como transitória.</li>
-        <li><strong>Cliente HTTP do frontend gerado, nunca escrito à mão:</strong> elimina divergência de contrato; qualquer mudança de DTO no backend obriga regeneração via <code>ng-openapi-gen</code>.</li>
-        <li><strong>Angular standalone + Signals, sem NgRx:</strong> a complexidade da aplicação não justifica um state manager externo.</li>
-        <li><strong>Simulador Python replicando o payload exato do firmware:</strong> permite testar o pipeline completo, incluindo excursões térmicas, sem depender de hardware físico disponível.</li>
-        <li><strong>Testcontainers em vez de mocks para infraestrutura:</strong> os testes de integração sobem instâncias reais de Postgres, InfluxDB e um broker MQTT (HiveMQ), refletindo o comportamento de produção.</li>
+        <li><strong>Autenticação stand-in via <code>X-User-Id</code>:</strong> a API ainda não tem login real (senha/JWT). Um <code>HttpInterceptor</code> injeta esse header em toda chamada do frontend; papel e tipo de empresa do usuário são resolvidos uma vez e cacheados em signal. Decisão documentada como transitória, a ser substituída quando a autenticação completa ("Security Future/v2") for implementada.</li>
+        <li><strong>Cliente HTTP do frontend gerado, nunca escrito à mão:</strong> elimina divergência de contrato entre backend e frontend; qualquer mudança de DTO no backend obriga regeneração do cliente via <code>ng-openapi-gen</code>.</li>
+        <li><strong>Angular standalone + Signals, sem NgRx:</strong> a complexidade da aplicação não justifica um state manager externo; HttpClient + Signals cobre as necessidades de estado local/reativo.</li>
+        <li><strong>Simulador Python replicando o contrato do firmware:</strong> permite testar e demonstrar o pipeline completo sem depender do hardware físico, inclusive excursões térmicas, perda de sinal, queda de energia e backfill, que seriam difíceis de provocar no sensor real.</li>
+        <li><strong>Testcontainers em vez de mocks para infraestrutura:</strong> os testes de integração do backend sobem instâncias reais de Postgres, InfluxDB e um broker MQTT (HiveMQ), garantindo que o comportamento testado reflita a infraestrutura de produção.</li>
+        <li><strong>Alertas derivados do relatório, não da leitura isolada:</strong> a classificação depende da duração da excursão, que só é conhecida com o histórico do período. Por isso as excursões são detectadas na geração do relatório.</li>
+        <li><strong>Limites de conformidade no banco (migration), não em constantes no código:</strong> mudar um valor não exige alterar o código, e cada relatório guarda os limites que aplicou.</li>
+        <li><strong>Alerta identificado por viagem + início da excursão:</strong> cada nova versão do relatório recria as excursões, então as ações corretivas são ligadas a esse par, e não ao id da excursão, para não se perderem.</li>
+        <li><strong>Carregamento de relações com <code>@EntityGraph</code> e consulta em lote:</strong> evita o problema de N+1 consultas nas listagens, e um teste automatizado garante que o número de consultas não cresce com o volume de dados.</li>
+        <li><strong>Last Will e keep-alive de 15 s no MQTT:</strong> o próprio broker avisa quando um sensor cai sem se desconectar, e o sistema identifica a queda em cerca de 22 s.</li>
       </ul>
     </section>
 
     <!-- 7.10.8 Testes realizados -->
     <section class="block" id="testes">
       <h2><span class="num">8</span> Testes realizados</h2>
-      <p class="lead">Do firmware em campo aos testes de integração do backend.</p>
+      <p class="lead">Do firmware em campo aos testes automatizados de backend, frontend e simulador.</p>
       <ul>
-        <li><strong>Testes de integração do backend</strong> (JUnit + Testcontainers): pipeline completo MQTT → SSE → InfluxDB → geração de relatório de conformidade, além de Companies, Vehicles, Drivers, Meat Batches, Users e Compliance Thresholds.</li>
-        <li><strong>Regras de negócio validadas em teste:</strong> RN-08 (transições de status de viagem, incluindo conflito) e RN-05 (visibilidade de alertas por papel/empresa).</li>
+        <li><strong>Testes automatizados do backend</strong> (JUnit + Testcontainers): 360 testes passando, entre unitários e de integração contra Postgres, InfluxDB e broker MQTT reais. Cobrem:
+          <ul>
+            <li>o pipeline MQTT → InfluxDB → SSE → relatório;</li>
+            <li>backfill e estado de conexão;</li>
+            <li>classificação com tolerância;</li>
+            <li>MKT (conferida contra cálculo feito à mão) e períodos sem dados;</li>
+            <li>ações corretivas em alertas e isolamento entre empresas;</li>
+            <li>contagem de consultas das listagens, que não pode crescer com o volume.</li>
+          </ul>
+        </li>
+        <li><strong>Regras de negócio validadas em teste:</strong> RN-08 (transições de status de viagem, incluindo cenário de conflito) e RN-05 (visibilidade de alertas por papel/empresa).</li>
         <li><strong>Testes manuais via Swagger UI:</strong> módulo de Viagens (Trips) ponta a ponta, com captura de request/response reais.</li>
-        <li><strong>Testes de geração de certificado:</strong> geração e download do PDF de conformidade para um lote real (<code>LC-2026-000003</code>).</li>
-        <li><strong>Testes unitários do frontend:</strong> spec por componente Angular (Login, Registro, Shell, Header, Sidebar, Dashboard, ViagensLista, ViagemDetalhe, Frota, DataTable, Button, ComingSoon).</li>
-        <li><strong>Teste de campo do firmware:</strong> validação manual do ESP32 + DS18B20 publicando leituras reais via WiFi/MQTT, incluindo verificação do LED indicador e do log serial de erro para sensor desconectado.</li>
-        <li><strong>Simulação de cenários de temperatura:</strong> uso do simulador Python (<code>--scenario compliant</code> / <code>--scenario non-compliant</code>) para validar tanto relatórios aprovados quanto a geração e normalização de alertas em uma excursão térmica sustentada, sem hardware físico.</li>
+        <li><strong>Testes de geração de certificado:</strong> geração e download do PDF de conformidade para um lote real (<code>LC-2026-000003</code>), validando o <code>ReportPdfRenderer</code>.</li>
+        <li><strong>Testes unitários do frontend:</strong> 38 arquivos de spec, um por componente e serviço, incluindo as regras de permissão das operações de viagem.</li>
+        <li><strong>Teste de campo do firmware:</strong> integração do hardware real com o sistema completo — ESP32 publicando na viagem <code>VG-2026-00144</code> (veículo FRZ5E32, <code>device_id</code> <code>esp32-001</code>), com as leituras aparecendo no gráfico ao vivo.</li>
+        <li><strong>Testes do simulador:</strong> 55 testes unitários (ciclo de vida, buffer offline, backfill, payloads, eventos de temperatura, robustez e API do painel), além da verificação ponta a ponta <code>e2e.py</code>, que confere:
+          <ul>
+            <li>falha longa e pico como CRÍTICO;</li>
+            <li>abertura de porta como ATENÇÃO;</li>
+            <li>payloads inválidos descartados.</li>
+          </ul>
+        </li>
       </ul>
     </section>
 
@@ -520,15 +751,28 @@ erDiagram
       <h2><span class="num">9</span> Evidências do desenvolvimento</h2>
       <p class="lead">Artefatos gerados ao longo do desenvolvimento, disponíveis no repositório.</p>
       <ul>
-        <li><strong>Relatórios de teste de API</strong> (<code>docs/api-test-reports/</code>): Swagger UI + módulo Trips; cobertura completa da API (Companies, Vehicles, Drivers, Meat Batches, Users, Compliance Thresholds, RN-08, pipeline MQTT → SSE → InfluxDB → Relatório); geração do certificado <code>LC-2026-000003</code>.</li>
+        <li><strong>Relatórios de teste de API</strong> (<a href="api-test-reports/"><code>api-test-reports/</code></a>): (1) Swagger UI + módulo Trips, com capturas do fluxo "try it out"; (2) cobertura completa da API (Companies, Vehicles, Drivers, Meat Batches, Users, Compliance Thresholds, RN-08 e pipeline MQTT → SSE → InfluxDB → Relatório); (3) geração do certificado <code>LC-2026-000003</code>, com o PDF gerado e o código-fonte do renderer anexados.</li>
         <li><strong>Capturas de tela</strong> de cada etapa testada (Swagger UI, payload preenchido, resposta da API, conflito RN-08, geração e resposta do PDF).</li>
-        <li><strong>Histórico de commits</strong> organizado por feature/branch: auth → shared components → dashboard → viagens (SSE) → frota, cada um com commits separados de template, estilos, componente e teste.</li>
+        <li><strong>Histórico de commits</strong> organizado por feature/branch e integrado por pull requests revisados, refletindo a evolução incremental: autenticação, componentes compartilhados, dashboard, viagens (SSE), frota, operações de escrita, ciclo de vida do sensor e backfill, tolerância de alertas, ações corretivas e métricas sanitárias do certificado.</li>
         <li><strong>Código-fonte do firmware</strong> (<code>ESP32_Arduino.ino</code>), com comentários documentando o contrato de payload esperado pelo backend e a fiação do sensor.</li>
-        <li><strong>Simulador Python</strong> (<code>simulator.py</code> + <code>README.md</code>), documentando o contrato de payload MQTT e os argumentos usados para gerar cenários de teste.</li>
+        <li><strong>Simulador Python</strong> (<code>simulator.py</code>, pacote <code>coldchain_sim</code>, <code>e2e.py</code> e <code>README.md</code>), documentando os três tópicos MQTT, os modos de conexão, os eventos de temperatura e os testes de robustez.</li>
       </ul>
     </section>
 
-    <footer>ColdChainTracker — Documentação técnica gerada a partir do estado atual do repositório.</footer>
+    <!-- 7.10.10 Limitações conhecidas -->
+    <section class="block" id="limitacoes">
+      <h2><span class="num">10</span> Limitações conhecidas</h2>
+      <p class="lead">O que ainda não está pronto, documentado de forma explícita.</p>
+      <ul>
+        <li><strong>Autenticação provisória:</strong> o usuário é identificado pelo header <code>X-User-Id</code>, sem senha nem token; a autenticação completa está prevista para uma versão futura.</li>
+        <li>O firmware ainda publica só telemetria; o estado de conexão, o Last Will e o backfill estão implementados no backend e no simulador.</li>
+        <li>O ESP32 conecta apenas em redes Wi-Fi de 2,4 GHz, e o IP do broker é configurado no código.</li>
+        <li>O detalhe de lote (<code>/lotes/:id</code>) e a tela de ações corretivas ainda não têm interface.</li>
+        <li>A ingestão ao vivo ainda aceita leituras com horário no futuro; só o backfill as descarta.</li>
+      </ul>
+    </section>
+
+    <footer>ColdChainTracker — Documentação técnica gerada a partir do estado atual do repositório · atualizada em 29/10/2026.</footer>
   </main>
 </div>
 
